@@ -44,7 +44,8 @@ e<-.05
 
 #Number of Observations#
 #Total number of observation opportunties agents will have in mate search
-nobs<-gsize/2*100
+#Observations are grouped into 5s to accelerate model runtimes
+nobs<-((gsize/2)*100)/5
 
 
 
@@ -260,18 +261,18 @@ for(r in 1:ngroups){
     ucbLearnMale[choiceMale]<-(ucbLearnMale[choiceMale]*ucbInvestMale[choiceMale]+
                                   rnorm(nrow(choiceMale),
                                         maleAttMatrix[choiceMale],
-                                        sqrt(noise)))/(ucbInvestMale[choiceMale]+1)
+                                        sqrt(noise/5)))/(ucbInvestMale[choiceMale]+5)
     
     ucbLearnFemale[choiceFemale]<-(ucbLearnFemale[choiceFemale]*ucbInvestFemale[choiceFemale]+
                                       rnorm(nrow(choiceFemale),
                                         femaleAttMatrix[choiceFemale],
-                                        sqrt(noise)))/(ucbInvestFemale[choiceFemale]+1)
+                                        sqrt(noise/5)))/(ucbInvestFemale[choiceFemale]+5)
     
     
     
     #Update observation counts
-    ucbInvestMale[choiceMale]<-ucbInvestMale[choiceMale]+1
-    ucbInvestFemale[choiceFemale]<-ucbInvestFemale[choiceFemale]+1
+    ucbInvestMale[choiceMale]<-ucbInvestMale[choiceMale]+5
+    ucbInvestFemale[choiceFemale]<-ucbInvestFemale[choiceFemale]+5
     
     
     
@@ -303,18 +304,18 @@ for(r in 1:ngroups){
     recipLearnMale[choiceMale]<-(recipLearnMale[choiceMale]*recipInvestMale[choiceMale]+
                                   rnorm(nrow(choiceMale),
                                         maleAttMatrix[choiceMale],
-                                        sqrt(noise)))/(recipInvestMale[choiceMale]+1)
+                                        sqrt(noise/5)))/(recipInvestMale[choiceMale]+5)
     
     recipLearnFemale[choiceFemale]<-(recipLearnFemale[choiceFemale]*recipInvestFemale[choiceFemale]+
                                       rnorm(nrow(choiceFemale),
                                         femaleAttMatrix[choiceFemale],
-                                        sqrt(noise)))/(recipInvestFemale[choiceFemale]+1)
+                                        sqrt(noise/5)))/(recipInvestFemale[choiceFemale]+5)
     
     
     
     #Update observation counts
-    recipInvestMale[choiceMale]<-recipInvestMale[choiceMale]+1
-    recipInvestFemale[choiceFemale]<-recipInvestFemale[choiceFemale]+1
+    recipInvestMale[choiceMale]<-recipInvestMale[choiceMale]+5
+    recipInvestFemale[choiceFemale]<-recipInvestFemale[choiceFemale]+5
     
     
     
@@ -339,11 +340,11 @@ for(r in 1:ngroups){
   
   #Set MV perceptions equal to one random observation
   nlMaleAttMatrix<-matrix(rnorm(length(maleAttMatrix),
-                                       maleAttMatrix,sqrt(noise)),
+                                       maleAttMatrix,sqrt(noise/5)),
                                  nrow(maleAttMatrix),ncol(maleAttMatrix))
   
   nlFemaleAttMatrix<-matrix(rnorm(length(femaleAttMatrix),
-                                         femaleAttMatrix,sqrt(noise)),
+                                         femaleAttMatrix,sqrt(noise/5)),
                                    nrow(femaleAttMatrix),ncol(femaleAttMatrix))
   
   #Invest in proportion to observed MV

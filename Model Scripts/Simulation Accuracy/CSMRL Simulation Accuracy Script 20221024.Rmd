@@ -21,7 +21,7 @@ library(doParallel)
 ```{r}
 
 #Load in the population data
-data<-read.csv("Model Outputs/Couple Populations/CSMRL Couple Population 20221024 124842.csv")
+data<-read.csv("Model Outputs/Couple Populations/CSMRL Couple Population 20221024 234211.csv")
 
 pairs<-cbind(data[data$sex==0,],data[data$sex==1,])
 
@@ -67,7 +67,7 @@ e<-.05
 
 #Number of Observations#
 #Total number of observation opportunties agents will have in mate search
-nobs<-sizes*30
+nobs<-(sizes*100)/5
 
 
 
@@ -230,18 +230,18 @@ mrepro<-foreach(s = samples,.combine=rbind) %dopar% {
         ucbLearnMale[choiceMale]<-(ucbLearnMale[choiceMale]*ucbInvestMale[choiceMale]+
                                       rnorm(nrow(choiceMale),
                                             maleAttMatrix[choiceMale],
-                                            sqrt(noise)))/(ucbInvestMale[choiceMale]+1)
+                                            sqrt(noise/5)))/(ucbInvestMale[choiceMale]+5)
         
         ucbLearnFemale[choiceFemale]<-(ucbLearnFemale[choiceFemale]*ucbInvestFemale[choiceFemale]+
                                           rnorm(nrow(choiceFemale),
                                             femaleAttMatrix[choiceFemale],
-                                            sqrt(noise)))/(ucbInvestFemale[choiceFemale]+1)
+                                            sqrt(noise/5)))/(ucbInvestFemale[choiceFemale]+5)
         
         
         
         #Update observation counts
-        ucbInvestMale[choiceMale]<-ucbInvestMale[choiceMale]+1
-        ucbInvestFemale[choiceFemale]<-ucbInvestFemale[choiceFemale]+1
+        ucbInvestMale[choiceMale]<-ucbInvestMale[choiceMale]+5
+        ucbInvestFemale[choiceFemale]<-ucbInvestFemale[choiceFemale]+5
         
         
         
@@ -273,18 +273,18 @@ mrepro<-foreach(s = samples,.combine=rbind) %dopar% {
         recipLearnMale[choiceMale]<-(recipLearnMale[choiceMale]*recipInvestMale[choiceMale]+
                                       rnorm(nrow(choiceMale),
                                             maleAttMatrix[choiceMale],
-                                            sqrt(noise)))/(recipInvestMale[choiceMale]+1)
+                                            sqrt(noise/5)))/(recipInvestMale[choiceMale]+5)
         
         recipLearnFemale[choiceFemale]<-(recipLearnFemale[choiceFemale]*recipInvestFemale[choiceFemale]+
                                           rnorm(nrow(choiceFemale),
                                             femaleAttMatrix[choiceFemale],
-                                            sqrt(noise)))/(recipInvestFemale[choiceFemale]+1)
+                                            sqrt(noise/5)))/(recipInvestFemale[choiceFemale]+5)
         
         
         
         #Update observation counts
-        recipInvestMale[choiceMale]<-recipInvestMale[choiceMale]+1
-        recipInvestFemale[choiceFemale]<-recipInvestFemale[choiceFemale]+1
+        recipInvestMale[choiceMale]<-recipInvestMale[choiceMale]+5
+        recipInvestFemale[choiceFemale]<-recipInvestFemale[choiceFemale]+5
         
         
         
@@ -309,11 +309,11 @@ mrepro<-foreach(s = samples,.combine=rbind) %dopar% {
       
       #Set MV perceptions equal to one random observation
       nlMaleAttMatrix<-matrix(rnorm(length(maleAttMatrix),
-                                           maleAttMatrix,sqrt(noise)),
+                                           maleAttMatrix,sqrt(noise/5)),
                                      nrow(maleAttMatrix),ncol(maleAttMatrix))
       
       nlFemaleAttMatrix<-matrix(rnorm(length(femaleAttMatrix),
-                                             femaleAttMatrix,sqrt(noise)),
+                                             femaleAttMatrix,sqrt(noise/5)),
                                        nrow(femaleAttMatrix),ncol(femaleAttMatrix))
       
       #Invest in proportion to observed MV
