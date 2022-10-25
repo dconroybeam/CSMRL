@@ -44,7 +44,7 @@ e<-.05
 
 #Number of Observations#
 #Total number of observation opportunties agents will have in mate search
-nobs<-gsize/2*30
+nobs<-gsize/2*100
 
 
 
