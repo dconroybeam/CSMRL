@@ -21,7 +21,7 @@ library(doParallel)
 ```{r}
 
 #Load in the population data
-data<-read.csv("Model Outputs/Couple Populations/CSMRL Couple Population 20221024 234211.csv")
+data<-read.csv("Model Outputs/Couple Populations/CSMRL Couple Population 20221025 115234.csv")
 
 pairs<-cbind(data[data$sex==0,],data[data$sex==1,])
 
@@ -37,13 +37,13 @@ models<-sort(unique(data$model))
 ```{r}
 #Model loops#
 #How many samples will be drawn from the population
-samples<-1:100
+samples<-1:50
 
 
 
 #Sample Size#
 #The size of the samples to be drawn from the population
-sizes<-300
+sizes<-500
 
 
 
@@ -309,11 +309,11 @@ mrepro<-foreach(s = samples,.combine=rbind) %dopar% {
       
       #Set MV perceptions equal to one random observation
       nlMaleAttMatrix<-matrix(rnorm(length(maleAttMatrix),
-                                           maleAttMatrix,sqrt(noise/5)),
+                                           maleAttMatrix,sqrt(noise)),
                                      nrow(maleAttMatrix),ncol(maleAttMatrix))
       
       nlFemaleAttMatrix<-matrix(rnorm(length(femaleAttMatrix),
-                                             femaleAttMatrix,sqrt(noise/5)),
+                                             femaleAttMatrix,sqrt(noise)),
                                        nrow(femaleAttMatrix),ncol(femaleAttMatrix))
       
       #Invest in proportion to observed MV
