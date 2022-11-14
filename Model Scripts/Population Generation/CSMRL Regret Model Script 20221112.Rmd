@@ -29,22 +29,25 @@ popsize<-500
 
 #UCB Constant#
 #Controls degree of exploration for the UCB strategy and the UCB reciprocal
-c<-.5
+#Chosen based on parameter tuning
+c<-1.5
 cRecip<-.2
 
 
 
 #Thompson SD#
 #Starting SD for Thompson sampling and Thompson Reciprocal
-tSD<-.1
-tSDRecip<-.3
+#Chosen based on parameter tuning
+tSD<-.2
+tSDRecip<-.25
 
 
 
 #Epsilon#
-#Probability of exploration for the Epsilon Greegy 
+#Probability of exploration for the Epsilon Greedy 
 #and Epsilon Reciprocal investment strategy
-e<-.15
+#Chosen based on parameter tuning
+e<-.2
 eRegret<-.15
 
 
@@ -53,7 +56,6 @@ eRegret<-.15
 #Total number of observation opportunities agents will have in mate search
 #Expressed in blocks of 1,000 observations (for plotting)
 blocks<-10
-nobs<-blocks*1000
 
 
 
@@ -88,9 +90,9 @@ set.seed(20221112)
 
 ######Functions######
 ```{r}
-#Agent generation#
 
-agentgenerate<-function(popsize,sex,data){
+#Agent generation#
+agentGenerate<-function(popsize,sex,data){
   
   #Generate agents with trait and preferences by resampling from the human data
   agents<-apply(data[,c(10:41)],2,function(x) sample(x,popsize,replace=T))
@@ -133,7 +135,7 @@ agentgenerate<-function(popsize,sex,data){
 
 
 #Attraction calculation#
-mvcalc<-function(ideal,traits){
+mvCalc<-function(ideal,traits){
   #ideal is ideal preferences
   #traits is actual trait values
   
@@ -169,8 +171,8 @@ hdata<-hdata[,c(1,3:10,235:250,345:360)]
 hdata<-hdata[complete.cases(hdata[,c(10:41)]),]
 
 #Generate agents
-males<-agentgenerate(popsize/2,1,hdata[hdata$sex==1,])
-females<-agentgenerate(popsize/2,0,hdata[hdata$sex==0,])
+males<-agentGenerate(popsize/2,1,hdata[hdata$sex==1,])
+females<-agentGenerate(popsize/2,0,hdata[hdata$sex==0,])
 
 #Give each agent a unique PIN
 males$PIN<-sample(1:nrow(males),nrow(males),replace=F)
@@ -195,7 +197,7 @@ females$PIN<-sample(nrow(males):(nrow(males)+nrow(females)),
 #Males
 #Calculate the true mate value of each female to each male
 maleAttMatrix<-t(apply(males,1,function(q) 
-  mvcalc(as.numeric(q[2:17]),females[,c(18:33)])))
+  mvCalc(as.numeric(q[2:17]),females[,c(18:33)])))
 
 #Label these for ease of use
 colnames(maleAttMatrix)<-females$PIN
@@ -204,7 +206,7 @@ rownames(maleAttMatrix)<-males$PIN
 #Females
 #Calculate the true mate value of each male to each female
 femaleAttMatrix<-t(apply(females,1,function(q) 
-  mvcalc(as.numeric(q[2:17]),males[,c(18:33)]))) 
+  mvCalc(as.numeric(q[2:17]),males[,c(18:33)]))) 
 
 #Label these for ease of use
 colnames(femaleAttMatrix)<-males$PIN
@@ -224,6 +226,7 @@ investPropsFemale<-t(apply(femaleAttMatrix,1,function(x) x*(10/sum(x))))
 
 #Loop through 50 timesteps for courtship
 for(a in 1:50){
+  
   #How much investment each male agent received 
   #from each female agent in the previous timestep
   investProprMale<-t(investPropsFemale)
@@ -291,11 +294,11 @@ colnames(fullRels)<-c("femalePIN","malePIN")
 
 #Calculate male and female MVs
 fullRels$femaleMV<-sapply(fullRels$femalePIN,function(x) 
-  mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+  mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
   )
 
 fullRels$maleMV<-sapply(fullRels$malePIN,function(x) 
-  mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+  mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
   )
 
 #Calculate correlation between male and female MVs
@@ -553,6 +556,7 @@ for(l in 1:loops){
       #And update the standard deviation of the prior distribution
       thomSDMale[choiceMale]<-sqrt((noise*thomSDMale[choiceMale]^2)/
                                      (noise+thomSDMale[choiceMale]^2))
+      
       thomSDFemale[choiceFemale]<-sqrt((noise*thomSDFemale[choiceFemale]^2)/
                                          (noise+thomSDFemale[choiceFemale]^2))
       
@@ -830,11 +834,11 @@ for(l in 1:loops){
     
     #Calculate male and female MVs
     nlBlockRels$femaleMV<-sapply(nlBlockRels$femalePIN,function(x) 
-      mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+      mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
       )
     
     nlBlockRels$maleMV<-sapply(nlBlockRels$malePIN,function(x) 
-      mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+      mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
       )
     
     #Calculate correlation between male and female MVs
@@ -937,11 +941,11 @@ for(l in 1:loops){
     
     #Calculate male and female MVs
     epsilBlockRels$femaleMV<-sapply(epsilBlockRels$femalePIN,function(x) 
-      mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+      mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
       )
     
     epsilBlockRels$maleMV<-sapply(epsilBlockRels$malePIN,function(x) 
-      mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+      mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
       )
     
     #Calculate correlation between male and female MVs
@@ -979,6 +983,7 @@ for(l in 1:loops){
     
     #Loop through 50 timesteps for courtship
     for(a in 1:50){
+      
       #How much investment each male agent received
       #from each female agent in the previous timestep
       investProprMale<-t(investPropsFemale)
@@ -1043,11 +1048,11 @@ for(l in 1:loops){
     
     #Calculate male and female MVs
     ucbBlockRels$femaleMV<-sapply(ucbBlockRels$femalePIN,function(x) 
-      mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+      mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
       )
     
     ucbBlockRels$maleMV<-sapply(ucbBlockRels$malePIN,function(x) 
-      mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+      mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
       )
     
     #Calculate correlation between male and female MVs
@@ -1150,11 +1155,11 @@ for(l in 1:loops){
     
     #Calculate male and female MVs
     thomBlockRels$femaleMV<-sapply(thomBlockRels$femalePIN,function(x) 
-      mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+      mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
       )
     
     thomBlockRels$maleMV<-sapply(thomBlockRels$malePIN,function(x) 
-      mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+      mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
       )
     
     #Calculate correlation between male and female MVs
@@ -1171,6 +1176,9 @@ for(l in 1:loops){
     
     
     
+    
+    
+    
     #Reciprocal Epsilon Greedy Mate Choice#
     
     #A blank dataframe for storing the paired couples
@@ -1180,55 +1188,21 @@ for(l in 1:loops){
     #Name the eRecipPairs dataframe for cbinding
     colnames(eRecipPairs)<-c(colnames(females),colnames(males))
     
-    #Invest in proportion to perceived MV
-    investPropsMale<-t(apply(eRecipInvestMale,1,function(x)
-      x*(10/sum(x))))
-    
-    investPropsFemale<-t(apply(eRecipInvestFemale,1,function(x)
-      x*(10/sum(x))))
-    
-    #Loop through 50 timesteps for courtship
-    for(a in 1:50){
-      
-      #How much investment each male agent received 
-      #from each female agent in the previous timestep
-      investProprMale<-t(investPropsFemale)
-      
-      #How much investment each female agent received
-      #from each male agent in the previous timestep
-      investProprFemale<-t(investPropsMale)
-      
-      #Calculate how much investment each agent will send in this round.
-      investPropsMale<-(investPropsMale*investProprMale)
-      investPropsFemale<-(investPropsFemale*investProprFemale)
-      
-      #Rescale investment
-      investPropsMale<-t(apply(investPropsMale,1,function(x)
-        x*(10/sum(x))))
-      
-      investPropsFemale<-t(apply(investPropsFemale,1,function(x)
-        x*(10/sum(x))))
-      
-      #Some models can produce NaNs. This just converts these to 0
-      investPropsMale[is.nan(investPropsMale)]<-0
-      investPropsFemale[is.nan(investPropsFemale)]<-0
-      
-    }
-    
     #Determine which female each male has chosen
     #Break ties randomly
     mChoice<-data.frame("male"=1:nrow(males))
-    mChoice$choice<-apply(investPropsMale,1,function(x)
+    mChoice$choice<-apply(eRecipInvestMale,1,function(x)
       resample(which(x==max(x)),1))
     
     #Determine which male each female has chosen
     #Break ties randomly
     fChoice<-data.frame("female"=1:nrow(females))
-    fChoice$choice<-apply(investPropsFemale,1,function(x)
+    fChoice$choice<-apply(eRecipInvestFemale,1,function(x)
       resample(which(x==max(x)),1))
     
     #Loop through females' choices
     for(p in 1:nrow(fChoice)){
+      
       #Determine the male chosen by the current focal female
       chosenMale<-fChoice$choice[p]
       
@@ -1254,11 +1228,11 @@ for(l in 1:loops){
     
     #Calculate male and female MVs
     eRecipBlockRels$femaleMV<-sapply(eRecipBlockRels$femalePIN,function(x) 
-      mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+      mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
       )
     
     eRecipBlockRels$maleMV<-sapply(eRecipBlockRels$malePIN,function(x) 
-      mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+      mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
       )
     
     #Calculate correlation between male and female MVs
@@ -1275,6 +1249,9 @@ for(l in 1:loops){
     
     
     
+    
+    
+    
     #Reciprocal UCB Mate Choice#
     
     #A blank dataframe for storing the paired couples
@@ -1284,51 +1261,16 @@ for(l in 1:loops){
     #Name the uRecipPairs dataframe for cbinding
     colnames(uRecipPairs)<-c(colnames(females),colnames(males))
     
-    #Invest in proportion to perceived MV
-    investPropsMale<-t(apply(uRecipInvestMale,1,function(x)
-      x*(10/sum(x))))
-    
-    investPropsFemale<-t(apply(uRecipInvestFemale,1,function(x)
-      x*(10/sum(x))))
-    
-    #Loop through 50 timesteps for courtship
-    for(a in 1:50){
-      
-      #How much investment each male agent received
-      #from each female agent in the previous timestep
-      investProprMale<-t(investPropsFemale)
-      
-      #How much investment each female agent received
-      #from each male agent in the previous timestep
-      investProprFemale<-t(investPropsMale)
-      
-      #Calculate how much investment each agent will send in this round.
-      investPropsMale<-(investPropsMale*investProprMale)
-      investPropsFemale<-(investPropsFemale*investProprFemale)
-      
-      #Rescale investment
-      investPropsMale<-t(apply(investPropsMale,1,function(x)
-        x*(10/sum(x))))
-      
-      investPropsFemale<-t(apply(investPropsFemale,1,function(x)
-        x*(10/sum(x))))
-      
-      #Some models can produce NaNs. This just converts these to 0
-      investPropsMale[is.nan(investPropsMale)]<-0
-      investPropsFemale[is.nan(investPropsFemale)]<-0
-      
-    }
-    
     #Determine which female each male has chosen
     #Break ties randomly
     mChoice<-data.frame("male"=1:nrow(males))
-    mChoice$choice<-apply(investPropsMale,1,function(x)
+    mChoice$choice<-apply(uRecipInvestMale,1,function(x)
       resample(which(x==max(x)),1))
     
     #Determine which male each female has chosen
     #Break ties randomly
     fChoice<-data.frame("female"=1:nrow(females))
-    fChoice$choice<-apply(investPropsFemale,1,function(x)
+    fChoice$choice<-apply(uRecipInvestFemale,1,function(x)
       resample(which(x==max(x)),1))
     
     #Loop through females' choices
@@ -1359,11 +1301,11 @@ for(l in 1:loops){
     
     #Calculate male and female MVs
     uRecipBlockRels$femaleMV<-sapply(uRecipBlockRels$femalePIN,function(x) 
-      mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+      mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
       )
     
     uRecipBlockRels$maleMV<-sapply(uRecipBlockRels$malePIN,function(x) 
-      mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+      mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
       )
     
     #Calculate correlation between male and female MVs
@@ -1380,6 +1322,9 @@ for(l in 1:loops){
     
     
     
+    
+    
+    
     #Reciprocal Thompson Mate Choice#
     
     #A blank dataframe for storing the paired couples
@@ -1389,51 +1334,16 @@ for(l in 1:loops){
     #Name the tRecipPairs dataframe for cbinding
     colnames(tRecipPairs)<-c(colnames(females),colnames(males))
     
-    #Invest in proportion to perceived MV
-    investPropsMale<-t(apply(tRecipInvestMale,1,function(x)
-      x*(10/sum(x))))
-    
-    investPropsFemale<-t(apply(tRecipInvestFemale,1,function(x)
-      x*(10/sum(x))))
-    
-    #Loop through 50 timesteps for courtship
-    for(a in 1:50){
-      
-      #How much investment each male agent received
-      #from each female agent in the previous timestep
-      investProprMale<-t(investPropsFemale)
-      
-      #How much investment each female agent received
-      #from each male agent in the previous timestep
-      investProprFemale<-t(investPropsMale)
-      
-      #Calculate how much investment each agent will send in this round.
-      investPropsMale<-(investPropsMale*investProprMale)
-      investPropsFemale<-(investPropsFemale*investProprFemale)
-      
-      #Rescale investment
-      investPropsMale<-t(apply(investPropsMale,1,function(x)
-        x*(10/sum(x))))
-      
-      investPropsFemale<-t(apply(investPropsFemale,1,function(x)
-        x*(10/sum(x))))
-      
-      #Some models can produce NaNs. This just converts these to 0
-      investPropsMale[is.nan(investPropsMale)]<-0
-      investPropsFemale[is.nan(investPropsFemale)]<-0
-      
-    }
-    
     #Determine which female each male has chosen
     #Break ties randomly
     mChoice<-data.frame("male"=1:nrow(males))
-    mChoice$choice<-apply(investPropsMale,1,function(x)
+    mChoice$choice<-apply(tRecipInvestMale,1,function(x)
       resample(which(x==max(x)),1))
     
     #Determine which male each female has chosen
     #Break ties randomly
     fChoice<-data.frame("female"=1:nrow(females))
-    fChoice$choice<-apply(investPropsFemale,1,function(x)
+    fChoice$choice<-apply(tRecipInvestFemale,1,function(x)
       resample(which(x==max(x)),1))
     
     #Loop through females' choices
@@ -1464,11 +1374,11 @@ for(l in 1:loops){
     
     #Calculate male and female MVs
     tRecipBlockRels$femaleMV<-sapply(tRecipBlockRels$femalePIN,function(x) 
-      mvcalc(malePrefs,females[females$PIN==x,c(18:33)])
+      mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
       )
     
     tRecipBlockRels$maleMV<-sapply(tRecipBlockRels$malePIN,function(x) 
-      mvcalc(femalePrefs,males[males$PIN==x,c(18:33)])
+      mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
       )
     
     #Calculate correlation between male and female MVs
@@ -1507,6 +1417,7 @@ for(l in 1:loops){
   tRecipRels$acc<-tRecipRels$malePIN==fullRels$malePIN[
     match(tRecipRels$femalePIN,fullRels$femalePIN)]
   
+  
   #Label what model produced each set of data
   nlRels$model<-"No Learning"
   epsilRels$model<-"Epsilon Greedy"
@@ -1521,6 +1432,9 @@ for(l in 1:loops){
   relData<-rbind(nlRels,epsilRels,thomRels,
                  ucbRels,eRecipRels,tRecipRels,uRecipRels)
   
+  #Convert NA accuracies to zeroes:
+  relData$acc<-ifelse(is.na(relData$acc),0,relData$acc)
+  
   #Create a dataframe for summarized results
   loopData<-data.frame("loop"=l,"model"=rep(sort(unique(relData$model)),
                                    each=length(unique(relData$obs))),
@@ -1530,12 +1444,12 @@ for(l in 1:loops){
   #Compute average accuracy across models and observation blocks
   loopData$acc<-c(tapply(relData$acc,list(relData$obs,relData$model),
                          function(x)
-                           mean(x,na.rm=T)))
+                           mean(x)))
   
   #Compute average assortative mating across models and observation blocks
   loopData$r<-c(tapply(relData$r,list(relData$obs,relData$model),
                        function(x) 
-                         mean(x,na.rm=T)))
+                         mean(x)))
   
   #Rbind this loop's data into the full dataframe
   data<-rbind(data,loopData)
@@ -1563,12 +1477,12 @@ data2<-data.frame("model"=rep(sort(unique(data$model)),
 #Compute average accuracy across models and observation blocks
 data2$acc<-c(tapply(data$acc,
                     list(data$obs,data$model),function(x)
-  mean(x,na.rm=T)))
+  mean(x)))
 
 #Compute average assortative mating across models and observation blocks
 data2$r<-c(tapply(data$r,
                   list(data$obs,data$model),function(x) 
-  mean(x,na.rm=T)))
+  mean(x)))
 
 #Reorder model levels
 data2$model<-factor(data2$model,
@@ -1600,7 +1514,7 @@ regretPlot<-qplot(obs,
   geom_hline(yintercept=fullAssort,color="#00BFC4",linetype="dashed",lwd=1)
 
 
-write.csv(data2,"Model Outputs/Regret Models/CSMRL Regret Results 20221123.csv",row.names=F)
+write.csv(data2,"Model Outputs/Regret Models/CSMRL Regret Results.csv",row.names=F)
 
 ggsave("Figures/CSMRL Regret Model Results 20221123.tiff",plot=regretPlot,
        width=14,height=10,units="in",dpi=300)
