@@ -340,11 +340,11 @@ for(r in 1:ngroups){
   
   #Set MV perceptions equal to one random observation
   nlMaleAttMatrix<-matrix(rnorm(length(maleAttMatrix),
-                                       maleAttMatrix,sqrt(noise/5)),
+                                       maleAttMatrix,sqrt(noise)),
                                  nrow(maleAttMatrix),ncol(maleAttMatrix))
   
   nlFemaleAttMatrix<-matrix(rnorm(length(femaleAttMatrix),
-                                         femaleAttMatrix,sqrt(noise/5)),
+                                         femaleAttMatrix,sqrt(noise)),
                                    nrow(femaleAttMatrix),ncol(femaleAttMatrix))
   
   #Invest in proportion to observed MV
