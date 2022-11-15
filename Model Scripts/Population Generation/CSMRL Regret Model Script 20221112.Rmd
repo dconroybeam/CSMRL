@@ -1503,12 +1503,12 @@ regretPlot<-qplot(obs,
                   color=variable,
                   data=plotData,
                   xlab="Number of Observations",
-                  ylab="Value")+
+                  ylab="Average Value")+
   geom_line()+
   theme_grey(base_size=20)+
   scale_color_discrete(name="Outcome",
-                       labels=c("Simulation\nAccuracy",
-                                "Assortative\nMating"))+
+                       labels=c("Simulation\nAccuracy (%)",
+                                "Assortative\nMating (r)"))+
   facet_wrap(~model,ncol=4)+
   geom_hline(yintercept=1,color="#F8766D",linetype="dashed",lwd=1)+
   geom_hline(yintercept=fullAssort,color="#00BFC4",linetype="dashed",lwd=1)
@@ -1516,7 +1516,7 @@ regretPlot<-qplot(obs,
 
 write.csv(data2,"Model Outputs/Regret Models/CSMRL Regret Results.csv",row.names=F)
 
-ggsave("Figures/CSMRL Regret Model Results 20221123.tiff",plot=regretPlot,
+ggsave("Figures/CSMRL Regret Model Results.tiff",plot=regretPlot,
        width=14,height=10,units="in",dpi=300)
 
 ```
