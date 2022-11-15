@@ -538,7 +538,7 @@ for(r in 1:ngroups){
   
   
   
-  ###reciprocal Investment Mate Choice###
+  ###RWTS Mate Choice###
   
   #A blank dataframe for storing the paired couples
   tRecipGpairs<-matrix(,1,(ncol(malesg)+ncol(femalesg)))

@@ -22,7 +22,7 @@ library(doParallel)
 ```{r}
 
 #Load in the population data
-data<-read.csv("Model Outputs/Couple Populations/CSMRL Couple Population 20221025 115234.csv")
+data<-read.csv("Model Outputs/Couple Populations/CSMRL Couple Population 20221114 163104.csv")
 
 #Rearrange into pairs
 pairs<-cbind(data[data$sex==0,],data[data$sex==1,])
