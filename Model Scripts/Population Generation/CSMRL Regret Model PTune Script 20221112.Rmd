@@ -52,7 +52,7 @@ eRecip<-c(.01,seq(.05,.20,length.out=4))
 #Number of Observations#
 #Total number of observation opportunities agents will have in mate search
 #Expressed in blocks of 1,000 observations (for plotting)
-blocks<-5
+blocks<-10
 
 
 
@@ -223,6 +223,7 @@ investPropsFemale<-t(apply(femaleAttMatrix,1,function(x) x*(10/sum(x))))
 
 #Loop through 50 timesteps for courtship
 for(a in 1:50){
+  
   #How much investment each male agent received 
   #from each female agent in the previous timestep
   investProprMale<-t(investPropsFemale)
@@ -242,6 +243,7 @@ for(a in 1:50){
   #Some models can produce NaNs. This just converts these to 0
   investPropsMale[is.nan(investPropsMale)]<-0
   investPropsFemale[is.nan(investPropsFemale)]<-0
+  
 }
 
 #Determine which female each male has chosen
@@ -300,13 +302,6 @@ fullRels$maleMV<-sapply(fullRels$malePIN,function(x)
 #Calculate correlation between male and female MVs
 fullAssort<-cor(fullRels$femaleMV,fullRels$maleMV)
 
-#Store the assortative mating correlation in the dataframe
-fullRels$r<-fullAssort
-
-#Create a vector to track observations
-#In the full information case, there is just 1 observation necessary
-fullRels$obs<-1
-
 ```
 
 
@@ -336,17 +331,12 @@ for(s in 1:5){
   #Loop through learning loops
   for(l in 1:loops){
     
-    #Create matrices to store model results
-    epsilRels<-fullRels[-(1:nrow(fullRels)),]
-    ucbRels<-fullRels[-(1:nrow(fullRels)),]
-    thomRels<-fullRels[-(1:nrow(fullRels)),]
-    
-    eRecipRels<-fullRels[-(1:nrow(fullRels)),]
-    uRecipRels<-fullRels[-(1:nrow(fullRels)),]
-    tRecipRels<-fullRels[-(1:nrow(fullRels)),]
-    
-    
-    
+    #Create a dataframe to store model results
+    simResults<-data.frame("s"=s,"loop"=l,"model"=NA,
+                           "obs"=NA,
+                           "r"=NA,
+                           "acc"=NA)
+        
     #Learning Preparation#
     
     #Create matrices to store learned MV values
@@ -747,51 +737,16 @@ for(s in 1:5){
       #Name the epsilPairs dataframe for cbinding
       colnames(epsilPairs)<-c(colnames(females),colnames(males))
       
-      #Invest in proportion to perceived MV
-      investPropsMale<-t(apply(epsilInvestMale,1,function(x) 
-        x*(10/sum(x))))
-      
-      investPropsFemale<-t(apply(epsilInvestFemale,1,function(x)
-        x*(10/sum(x))))
-      
-      #Loop through 50 timesteps for courtship
-      for(a in 1:50){
-        
-        #How much investment each male agent received
-        #from each female agent in the previous timestep
-        investProprMale<-t(investPropsFemale)
-        
-        #How much investment each female agent received 
-        #from each male agent in the previous timestep
-        investProprFemale<-t(investPropsMale)
-        
-        #Calculate how much investment each agent will send in this round.
-        investPropsMale<-(investPropsMale*investProprMale)
-        investPropsFemale<-(investPropsFemale*investProprFemale)
-        
-        #Rescale investment
-        investPropsMale<-t(apply(investPropsMale,1,function(x) 
-          x*(10/sum(x))))
-        
-        investPropsFemale<-t(apply(investPropsFemale,1,function(x) 
-          x*(10/sum(x))))
-        
-        #Some models can produce NaNs. This just converts these to 0
-        investPropsMale[is.nan(investPropsMale)]<-0
-        investPropsFemale[is.nan(investPropsFemale)]<-0
-        
-      }
-      
       #Determine which female each male has chosen
       #Break ties randomly
       mChoice<-data.frame("male"=1:nrow(males))
-      mChoice$choice<-apply(investPropsMale,1,function(x)
+      mChoice$choice<-apply(epsilInvestMale,1,function(x)
         resample(which(x==max(x)),1))
       
       #Determine which male each female has chosen
       #Break ties randomly
       fChoice<-data.frame("female"=1:nrow(females))
-      fChoice$choice<-apply(investPropsFemale,1,function(x)
+      fChoice$choice<-apply(epsilInvestFemale,1,function(x)
         resample(which(x==max(x)),1))
       
       #Loop through females' choices
@@ -829,17 +784,46 @@ for(s in 1:5){
         mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
         )
       
-      #Calculate correlation between male and female MVs
-      epsilAssort<-cor(epsilBlockRels$femaleMV,epsilBlockRels$maleMV)
       
-      #Store the correlation
-      epsilBlockRels$r<-epsilAssort
+      #If there are enough pairs to compute a correlation...
+      if(nrow(epsilBlockRels)>2){
+        
+        #Compute and save that correlation
+        epsilAssort<-cor(epsilBlockRels$femaleMV,epsilBlockRels$maleMV)
+        
+      } else {
+        
+        #Otherwise just set it to 0
+        epsilAssort<-0
+        
+      }
       
-      #Label with the observation block
-      epsilBlockRels$obs<-b*1000
+      #If there are any matches at all...
+      if(nrow(epsilBlockRels)>0){
+        
+        #Compute accuracy of matches relative to full information
+        epsilAcc<-fullRels$malePIN==epsilBlockRels$malePIN[
+        match(fullRels$femalePIN,epsilBlockRels$femalePIN)]
+        epsilAcc[is.na(epsilAcc)]<-0
+        epsilAcc<-mean(epsilAcc)
+        
+      } else{
+        
+        #Otherwise just set it to 0
+        epsilAcc<-0
+      }
       
-      #Bind block results into the full results matrix
-      epsilRels<-rbind(epsilRels,epsilBlockRels)
+      
+      #Add results to complete results dataframe
+      epsilResults<-data.frame("s"=s,
+                               "loop"=l,
+                               "model"="epsil",
+                               "obs"=b*1000,
+                               "r"=epsilAssort,
+                               "acc"=epsilAcc)
+      
+      simResults<-rbind(simResults,
+                        epsilResults)
       
       
       
@@ -855,51 +839,16 @@ for(s in 1:5){
       #Name the ucbPairs dataframe for cbinding
       colnames(ucbPairs)<-c(colnames(females),colnames(males))
       
-      #Invest in proportion to perceived MV
-      investPropsMale<-t(apply(ucbInvestMale,1,function(x)
-        x*(10/sum(x))))
-      
-      investPropsFemale<-t(apply(ucbInvestFemale,1,function(x)
-        x*(10/sum(x))))
-      
-      #Loop through 50 timesteps for courtship
-      for(a in 1:50){
-        
-        #How much investment each male agent received
-        #from each female agent in the previous timestep
-        investProprMale<-t(investPropsFemale)
-        
-        #How much investment each female agent received
-        #from each male agent in the previous timestep
-        investProprFemale<-t(investPropsMale)
-        
-        #Calculate how much investment each agent will send in this round.
-        investPropsMale<-(investPropsMale*investProprMale)
-        investPropsFemale<-(investPropsFemale*investProprFemale)
-        
-        #Rescale investment
-        investPropsMale<-t(apply(investPropsMale,1,function(x)
-          x*(10/sum(x))))
-        
-        investPropsFemale<-t(apply(investPropsFemale,1,function(x)
-          x*(10/sum(x))))
-        
-        #Some models can produce NaNs. This just converts these to 0
-        investPropsMale[is.nan(investPropsMale)]<-0
-        investPropsFemale[is.nan(investPropsFemale)]<-0
-        
-      }
-      
       #Determine which female each male has chosen
       #Break ties randomly
       mChoice<-data.frame("male"=1:nrow(males))
-      mChoice$choice<-apply(investPropsMale,1,function(x)
+      mChoice$choice<-apply(ucbInvestMale,1,function(x)
         resample(which(x==max(x)),1))
       
       #Determine which male each female has chosen
       #Break ties randomly
       fChoice<-data.frame("female"=1:nrow(females))
-      fChoice$choice<-apply(investPropsFemale,1,function(x)
+      fChoice$choice<-apply(ucbInvestFemale,1,function(x)
         resample(which(x==max(x)),1))
       
       #Loop through females' choices
@@ -937,18 +886,46 @@ for(s in 1:5){
         mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
         )
       
-      #Calculate correlation between male and female MVs
-      ucbAssort<-cor(ucbBlockRels$femaleMV,ucbBlockRels$maleMV)
       
-      #Store the correlation
-      ucbBlockRels$r<-ucbAssort
+      #If there are enough pairs to compute a correlation...
+      if(nrow(ucbBlockRels)>2){
+        
+        #Compute and save that correlation
+        ucbAssort<-cor(ucbBlockRels$femaleMV,ucbBlockRels$maleMV)
+        
+      } else {
+        
+        #Otherwise just set it to 0
+        ucbAssort<-0
+        
+      }
       
-      #Label with the observation block
-      ucbBlockRels$obs<-b*1000
+      #If there are any matches at all...
+      if(nrow(ucbBlockRels)>0){
+        
+        #Compute accuracy of matches relative to full information
+        ucbAcc<-fullRels$malePIN==ucbBlockRels$malePIN[
+        match(fullRels$femalePIN,ucbBlockRels$femalePIN)]
+        ucbAcc[is.na(ucbAcc)]<-0
+        ucbAcc<-mean(ucbAcc)
+        
+      } else{
+        
+        #Otherwise just set it to 0
+        ucbAcc<-0
+      }
       
-      #Bind block results into the full results matrix
-      ucbRels<-rbind(ucbRels,ucbBlockRels)
       
+      #Add results to complete results dataframe
+      ucbResults<-data.frame("s"=s,
+                               "loop"=l,
+                               "model"="ucb",
+                               "obs"=b*1000,
+                               "r"=ucbAssort,
+                               "acc"=ucbAcc)
+      
+      simResults<-rbind(simResults,
+                        ucbResults)      
       
       
       
@@ -963,51 +940,16 @@ for(s in 1:5){
       #Name the thomPairs dataframe for cbinding
       colnames(thomPairs)<-c(colnames(females),colnames(males))
       
-      #Invest in proportion to perceived MV
-      investPropsMale<-t(apply(thomInvestMale,1,function(x)
-        x*(10/sum(x))))
-      
-      investPropsFemale<-t(apply(thomInvestFemale,1,function(x)
-        x*(10/sum(x))))
-      
-      #Loop through 50 timesteps for courtship
-      for(a in 1:50){
-        
-        #How much investment each male agent received
-        #from each female agent in the previous timestep
-        investProprMale<-t(investPropsFemale)
-        
-        #How much investment each female agent received
-        #from each male agent in the previous timestep
-        investProprFemale<-t(investPropsMale)
-        
-        #Calculate how much investment each agent will send in this round.
-        investPropsMale<-(investPropsMale*investProprMale)
-        investPropsFemale<-(investPropsFemale*investProprFemale)
-        
-        #Rescale investment
-        investPropsMale<-t(apply(investPropsMale,1,function(x)
-          x*(10/sum(x))))
-        
-        investPropsFemale<-t(apply(investPropsFemale,1,function(x)
-          x*(10/sum(x))))
-        
-        #Some models can produce NaNs. This just converts these to 0
-        investPropsMale[is.nan(investPropsMale)]<-0
-        investPropsFemale[is.nan(investPropsFemale)]<-0
-        
-      }
-      
       #Determine which female each male has chosen
       #Break ties randomly
       mChoice<-data.frame("male"=1:nrow(males))
-      mChoice$choice<-apply(investPropsMale,1,function(x) 
+      mChoice$choice<-apply(thomInvestMale,1,function(x)
         resample(which(x==max(x)),1))
       
       #Determine which male each female has chosen
       #Break ties randomly
       fChoice<-data.frame("female"=1:nrow(females))
-      fChoice$choice<-apply(investPropsFemale,1,function(x)
+      fChoice$choice<-apply(thomInvestFemale,1,function(x)
         resample(which(x==max(x)),1))
       
       #Loop through females' choices
@@ -1045,17 +987,49 @@ for(s in 1:5){
         mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
         )
       
-      #Calculate correlation between male and female MVs
-      thomAssort<-cor(thomBlockRels$femaleMV,thomBlockRels$maleMV)
       
-      #Store the correlation
-      thomBlockRels$r<-thomAssort
+      #If there are enough pairs to compute a correlation...
+      if(nrow(thomBlockRels)>2){
+        
+        #Compute and save that correlation
+        thomAssort<-cor(thomBlockRels$femaleMV,thomBlockRels$maleMV)
+        
+      } else {
+        
+        #Otherwise just set it to 0
+        thomAssort<-0
+        
+      }
       
-      #Label with the observation block
-      thomBlockRels$obs<-b*1000
+      #If there are any matches at all...
+      if(nrow(thomBlockRels)>0){
+        
+        #Compute accuracy of matches relative to full information
+        thomAcc<-fullRels$malePIN==thomBlockRels$malePIN[
+        match(fullRels$femalePIN,thomBlockRels$femalePIN)]
+        thomAcc[is.na(thomAcc)]<-0
+        thomAcc<-mean(thomAcc)
+        
+      } else{
+        
+        #Otherwise just set it to 0
+        thomAcc<-0
+      }
       
-      #Bind block results into the full results matrix
-      thomRels<-rbind(thomRels,thomBlockRels)
+      
+      #Add results to complete results dataframe
+      thomResults<-data.frame("s"=s,
+                               "loop"=l,
+                               "model"="thom",
+                               "obs"=b*1000,
+                               "r"=thomAssort,
+                               "acc"=thomAcc)
+      
+      simResults<-rbind(simResults,
+                        thomResults)
+      
+      
+      
       
       
       
@@ -1115,17 +1089,49 @@ for(s in 1:5){
         mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
         )
       
-      #Calculate correlation between male and female MVs
-      eRecipAssort<-cor(eRecipBlockRels$femaleMV,eRecipBlockRels$maleMV)
       
-      #Store the correlation
-      eRecipBlockRels$r<-eRecipAssort
+      #If there are enough pairs to compute a correlation...
+      if(nrow(eRecipBlockRels)>2){
+        
+        #Compute and save that correlation
+        eRecipAssort<-cor(eRecipBlockRels$femaleMV,eRecipBlockRels$maleMV)
+        
+      } else {
+        
+        #Otherwise just set it to 0
+        eRecipAssort<-0
+        
+      }
       
-      #Label with the observation block
-      eRecipBlockRels$obs<-b*1000
+      #If there are any matches at all...
+      if(nrow(eRecipBlockRels)>0){
+        
+        #Compute accuracy of matches relative to full information
+        eRecipAcc<-fullRels$malePIN==eRecipBlockRels$malePIN[
+        match(fullRels$femalePIN,eRecipBlockRels$femalePIN)]
+        eRecipAcc[is.na(eRecipAcc)]<-0
+        eRecipAcc<-mean(eRecipAcc)
+        
+      } else{
+        
+        #Otherwise just set it to 0
+        eRecipAcc<-0
+      }
       
-      #Bind block results into the full results matrix
-      eRecipRels<-rbind(eRecipRels,eRecipBlockRels)
+      
+      #Add results to complete results dataframe
+      eRecipResults<-data.frame("s"=s,
+                               "loop"=l,
+                               "model"="eRecip",
+                               "obs"=b*1000,
+                               "r"=eRecipAssort,
+                               "acc"=eRecipAcc)
+      
+      simResults<-rbind(simResults,
+                        eRecipResults)      
+      
+      
+      
       
       
       
@@ -1185,17 +1191,49 @@ for(s in 1:5){
         mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
         )
       
-      #Calculate correlation between male and female MVs
-      uRecipAssort<-cor(uRecipBlockRels$femaleMV,uRecipBlockRels$maleMV)
       
-      #Store the correlation
-      uRecipBlockRels$r<-uRecipAssort
+      #If there are enough pairs to compute a correlation...
+      if(nrow(uRecipBlockRels)>2){
+        
+        #Compute and save that correlation
+        uRecipAssort<-cor(uRecipBlockRels$femaleMV,uRecipBlockRels$maleMV)
+        
+      } else {
+        
+        #Otherwise just set it to 0
+        uRecipAssort<-0
+        
+      }
       
-      #Label with the observation block
-      uRecipBlockRels$obs<-b*1000
+      #If there are any matches at all...
+      if(nrow(uRecipBlockRels)>0){
+        
+        #Compute accuracy of matches relative to full information
+        uRecipAcc<-fullRels$malePIN==uRecipBlockRels$malePIN[
+        match(fullRels$femalePIN,uRecipBlockRels$femalePIN)]
+        uRecipAcc[is.na(uRecipAcc)]<-0
+        uRecipAcc<-mean(uRecipAcc)
+        
+      } else{
+        
+        #Otherwise just set it to 0
+        uRecipAcc<-0
+      }
       
-      #Bind block results into the full results matrix
-      uRecipRels<-rbind(uRecipRels,uRecipBlockRels)
+      
+      #Add results to complete results dataframe
+      uRecipResults<-data.frame("s"=s,
+                               "loop"=l,
+                               "model"="uRecip",
+                               "obs"=b*1000,
+                               "r"=uRecipAssort,
+                               "acc"=uRecipAcc)
+      
+      simResults<-rbind(simResults,
+                        uRecipResults)      
+      
+      
+      
       
       
       
@@ -1255,73 +1293,54 @@ for(s in 1:5){
         mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
         )
       
-      #Calculate correlation between male and female MVs
-      tRecipAssort<-cor(tRecipBlockRels$femaleMV,tRecipBlockRels$maleMV)
       
-      #Store the correlation
-      tRecipBlockRels$r<-tRecipAssort
+      #If there are enough pairs to compute a correlation...
+      if(nrow(tRecipBlockRels)>2){
+        
+        #Compute and save that correlation
+        tRecipAssort<-cor(tRecipBlockRels$femaleMV,tRecipBlockRels$maleMV)
+        
+      } else {
+        
+        #Otherwise just set it to 0
+        tRecipAssort<-0
+        
+      }
       
-      #Label with the observation block
-      tRecipBlockRels$obs<-b*1000
+      #If there are any matches at all...
+      if(nrow(tRecipBlockRels)>0){
+        
+        #Compute accuracy of matches relative to full information
+        tRecipAcc<-fullRels$malePIN==tRecipBlockRels$malePIN[
+        match(fullRels$femalePIN,tRecipBlockRels$femalePIN)]
+        tRecipAcc[is.na(tRecipAcc)]<-0
+        tRecipAcc<-mean(tRecipAcc)
+        
+      } else{
+        
+        #Otherwise just set it to 0
+        tRecipAcc<-0
+      }
       
-      #Bind block results into the full results matrix
-      tRecipRels<-rbind(tRecipRels,tRecipBlockRels)
+      
+      #Add results to complete results dataframe
+      tRecipResults<-data.frame("s"=s,
+                               "loop"=l,
+                               "model"="tRecip",
+                               "obs"=b*1000,
+                               "r"=tRecipAssort,
+                               "acc"=tRecipAcc)
+      
+      simResults<-rbind(simResults,
+                        tRecipResults)
       
     }
     
-    #Compute accuracy of matches relative to full information
-    epsilRels$acc<-epsilRels$malePIN==fullRels$malePIN[
-      match(epsilRels$femalePIN,fullRels$femalePIN)]
-    
-    ucbRels$acc<-ucbRels$malePIN==fullRels$malePIN[
-      match(ucbRels$femalePIN,fullRels$femalePIN)]
-    
-    thomRels$acc<-thomRels$malePIN==fullRels$malePIN[
-      match(thomRels$femalePIN,fullRels$femalePIN)]
-    
-    eRecipRels$acc<-eRecipRels$malePIN==fullRels$malePIN[
-      match(eRecipRels$femalePIN,fullRels$femalePIN)]
-    
-    uRecipRels$acc<-uRecipRels$malePIN==fullRels$malePIN[
-      match(uRecipRels$femalePIN,fullRels$femalePIN)]
-    
-    tRecipRels$acc<-tRecipRels$malePIN==fullRels$malePIN[
-      match(tRecipRels$femalePIN,fullRels$femalePIN)]
-    
-    #Label what model produced each set of data
-    epsilRels$model<-"Epsilon Greedy"
-    ucbRels$model<-"UCB"
-    thomRels$model<-"Thompson\nSampling"
-    eRecipRels$model<-"Epsilon\nReciprocity"
-    uRecipRels$model<-"UCB\nReciprocity"
-    tRecipRels$model<-"Thompson\nReciprocity"
-    
-    
-    #Compile mate choice data
-    relData<-rbind(epsilRels,thomRels,
-                   ucbRels,eRecipRels,tRecipRels,uRecipRels)
-    
-    #Convert NA accuracies to zeroes:
-    relData$acc<-ifelse(is.na(relData$acc),0,relData$acc)
-    
-    #Create a dataframe for summarized results
-    loopData<-data.frame("s"=s,"loop"=l,"model"=rep(sort(unique(relData$model)),
-                                     each=length(unique(relData$obs))),
-                     "obs"=rep(unique(relData$obs),
-                               length(unique(relData$model))))
-    
-    #Compute average accuracy across models and observation blocks
-    loopData$acc<-c(tapply(relData$acc,list(relData$obs,relData$model),
-                           function(x)
-                             mean(x)))
-    
-    #Compute average assortative mating across models and observation blocks
-    loopData$r<-c(tapply(relData$r,list(relData$obs,relData$model),
-                         function(x) 
-                           mean(x)))
+    #Remove the row of NAs from the results dataframe
+    simResults<-simResults[-1,]
     
     #Rbind this loop's data into the full dataframe
-    data<-rbind(data,loopData)
+    data<-rbind(data,simResults)
     
   }
 }
@@ -1355,7 +1374,13 @@ data2$acc<-c(sapply(1:5,function(y) tapply(data$acc[data$s==y],
 
 #Reorder model levels
 data2$model<-factor(data2$model,
-                    levels=c("Epsilon Greedy",
+                    levels=c("epsil",
+                             "thom",
+                             "ucb",
+                             "eRecip",
+                             "tRecip",
+                             "uRecip"),
+                    labels=c("Epsilon Greedy",
                              "Thompson\nSampling",
                              "UCB",
                              "Epsilon\nReciprocity",
