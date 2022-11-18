@@ -34,7 +34,7 @@ popsize<-gsize*ngroups
 #Starting SD for Thompson sampling and Thompson Reciprocal
 #Chosen based on parameter tuning
 tSD<-.1
-tSDRecip<-.1
+tRecipSD<-.1
 
 
 
