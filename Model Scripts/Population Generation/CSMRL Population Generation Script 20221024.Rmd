@@ -34,7 +34,7 @@ popsize<-gsize*ngroups
 #Starting SD for Thompson sampling and Thompson Reciprocal
 #Chosen based on parameter tuning
 tSD<-.1
-tRecipSD<-.1
+tSDRecip<-.1
 
 
 
@@ -223,8 +223,13 @@ for(r in 1:ngroups){
   thomLearnMale<-matrix(1,nrow(malesg),nrow(femalesg))
   thomLearnFemale<-matrix(1,nrow(femalesg),nrow(malesg))
   
+<<<<<<< HEAD
   thomSDMale<-matrix(tSD,nrow(malesg),nrow(femalesg))
   thomSDFemale<-matrix(tSD,nrow(femalesg),nrow(malesg))
+=======
+  thomSDMale<-matrix(thomSD,nrow(malesg),nrow(femalesg))
+  thomSDFemale<-matrix(thomSD,nrow(femalesg),nrow(malesg))
+>>>>>>> d4093a89770ca2cde36fceaa876740849ba0ab7f
   
   tRecipLearnMale<-matrix(1,nrow(malesg),nrow(femalesg))
   tRecipLearnFemale<-matrix(1,nrow(femalesg),nrow(malesg))
