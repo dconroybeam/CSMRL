@@ -15,7 +15,7 @@ output: html_document
 
 #Group Size#
 #Determines the size of the subgroups agents will be sorted into
-gsize<-500
+gsize<-1000
 
 
 
@@ -30,22 +30,18 @@ popsize<-gsize*ngroups
 
 
 
-#UCB Constant#
-#Controls degree of exploration for the UCB strategy
-c<-1.5
-
-
-
 #Thompson SD#
-#Starting SD for Reciprocity-Weighted Thompson sampling (RWTS)
-tRecipSD<-.25
+#Starting SD for Thompson sampling and Thompson Reciprocal
+#Chosen based on parameter tuning
+tSD<-.1
+tRecipSD<-.1
 
 
 
 #Number of Observations#
 #Total number of observation opportunities agents will have in mate search
 #Observations are grouped into 5s to accelerate model runtimes
-nobs<-((gsize/2)*30)
+nobs<-((gsize/2)*30)/5
 
 
 
@@ -129,6 +125,7 @@ mvCalc<-function(ideal,traits){
 
 
 
+
 #Improved Sampling#
 #A sample function that will return a single scalar if given it
 resample <- function(x,...){if(length(x)==1) x else sample(x,...)} 
@@ -182,7 +179,7 @@ data<-males[-(1:nrow(males)),]
 
 #Generate each model-specific dataframe by copying from the larger dataframe
 nlPairs<-popPairs
-ucbPairs<-popPairs
+thomPairs<-popPairs
 tRecipPairs<-popPairs
 
 for(r in 1:ngroups){
@@ -223,8 +220,11 @@ for(r in 1:ngroups){
   ###Learning Preparation###
   
   #Create dataframes to store learned attraction values
-  ucbLearnMale<-matrix(1,nrow(malesg),nrow(femalesg))
-  ucbLearnFemale<-matrix(1,nrow(femalesg),nrow(malesg))
+  thomLearnMale<-matrix(1,nrow(malesg),nrow(femalesg))
+  thomLearnFemale<-matrix(1,nrow(femalesg),nrow(malesg))
+  
+  thomSDMale<-matrix(tSD,nrow(malesg),nrow(femalesg))
+  thomSDFemale<-matrix(tSD,nrow(femalesg),nrow(malesg))
 
   tRecipLearnMale<-matrix(1,nrow(malesg),nrow(femalesg))
   tRecipLearnFemale<-matrix(1,nrow(femalesg),nrow(malesg))
@@ -234,14 +234,17 @@ for(r in 1:ngroups){
   
   
   #Generate dataframes to store the number of visits
-  ucbInvestMale<-matrix(1,nrow(malesg),nrow(femalesg))
-  ucbInvestFemale<-matrix(1,nrow(femalesg),nrow(malesg))
+  thomInvestMale<-matrix(1,nrow(malesg),nrow(femalesg))
+  thomInvestFemale<-matrix(1,nrow(femalesg),nrow(malesg))
   
   tRecipInvestMale<-matrix(1,nrow(malesg),nrow(femalesg))
   tRecipInvestFemale<-matrix(1,nrow(femalesg),nrow(malesg))
   
   
   #Generate matrices to track history of reciprocity for RWTS
+  thomHistMale<-matrix(1,nrow(malesg),nrow(femalesg))
+  thomHistFemale<-matrix(1,nrow(femalesg),nrow(malesg))
+  
   tRecipHistMale<-matrix(1,nrow(malesg),nrow(femalesg))
   tRecipHistFemale<-matrix(1,nrow(femalesg),nrow(malesg))
   
@@ -252,55 +255,63 @@ for(r in 1:ngroups){
   #Loop through observation opportunities        
   for(o in 1:nobs){
 
-    #UCB#
+    #Thompson Sampling#
       
-    #Calculate the constant that will be added to MV values
-    #Increases the less frequently a potential mate is observed
-    cm<-c*sqrt(log(rowSums(ucbInvestMale)[1])/ucbInvestMale)
-    cf<-c*sqrt(log(rowSums(ucbInvestFemale)[1])/ucbInvestFemale)
+    #Draw a random MV value from each agent's prior distribution
+    thomDrawMale<-matrix(rnorm(length(thomLearnMale),
+                               thomLearnMale,
+                               thomSDMale),
+                         nrow(maleAttMatrix),
+                         ncol(maleAttMatrix))
     
-    #Add constant to perceived MV
-    ucbRewardMale<-ucbLearnMale+cm
-    ucbRewardFemale<-ucbLearnFemale+cf
+    thomDrawFemale<-matrix(rnorm(length(thomLearnFemale),
+                                 thomLearnFemale,
+                                 thomSDFemale),
+                           nrow(femaleAttMatrix),
+                           ncol(femaleAttMatrix))
     
-    #Choose the most rewarding option in light of this adjustment
+    #Choose the partner with the highest MV belief
     choiceMale<-cbind(1:nrow(malesg),
-                      apply(ucbRewardMale,1,function(x)
+                      apply(thomDrawMale,1,function(x)
                         resample(which(x==max(x)),1)))
     
     choiceFemale<-cbind(1:nrow(femalesg),
-                        apply(ucbRewardFemale,1,function(x)
+                        apply(thomDrawFemale,1,function(x)
                           resample(which(x==max(x)),1)))
     
-    
-    
-    #Update learned MV with a noisy observation of chosen partners
-    ucbLearnMale[choiceMale]<-(ucbLearnMale[choiceMale]*
-                                 ucbInvestMale[choiceMale]+
+    #Update the mean of agents' MV prior distributions
+    thomLearnMale[choiceMale]<-(noise/5*thomLearnMale[choiceMale]+
+                                  (thomSDMale[choiceMale]^2)*
                                   rnorm(nrow(choiceMale),
                                         maleAttMatrix[choiceMale],
-                                        sqrt(noise)))/
-      (ucbInvestMale[choiceMale]+1)
+                                        sqrt(noise/5)))/
+      (noise/5+(thomSDMale[choiceMale]^2))
     
-    ucbLearnFemale[choiceFemale]<-(ucbLearnFemale[choiceFemale]*
-                                     ucbInvestFemale[choiceFemale]+
+    thomLearnFemale[choiceFemale]<-(noise/5*thomLearnFemale[choiceFemale]+
+                                      (thomSDFemale[choiceFemale]^2)*
                                       rnorm(nrow(choiceFemale),
-                                        femaleAttMatrix[choiceFemale],
-                                        sqrt(noise)))/
-      (ucbInvestFemale[choiceFemale]+1)
+                                            femaleAttMatrix[choiceFemale],
+                                            sqrt(noise/5)))/
+      (noise/5+(thomSDFemale[choiceFemale]^2))
     
     
+    #And update the standard deviation of the prior distribution
+    thomSDMale[choiceMale]<-sqrt((noise/5*thomSDMale[choiceMale]^2)/
+                                   (noise/5+thomSDMale[choiceMale]^2))
+    
+    thomSDFemale[choiceFemale]<-sqrt((noise/5*thomSDFemale[choiceFemale]^2)/
+                                       (noise/5+thomSDFemale[choiceFemale]^2))
     
     #Update observation counts
-    ucbInvestMale[choiceMale]<-ucbInvestMale[choiceMale]+1
-    ucbInvestFemale[choiceFemale]<-ucbInvestFemale[choiceFemale]+1
+    thomInvestMale[choiceMale]<-thomInvestMale[choiceMale]+5
+    thomInvestFemale[choiceFemale]<-thomInvestFemale[choiceFemale]+5
     
     
     
     
     
     
-    #Reciprocity-Weighted Thompson Sampling#
+    #Reciprocal Thompson Sampling#
     
     #Draw a random MV value from each agent's prior distribution
     tRecipDrawMale<-matrix(rnorm(length(tRecipLearnMale),
@@ -325,34 +336,34 @@ for(r in 1:ngroups){
                           resample(which(x==max(x)),1)))
     
     #Update the mean of agents' MV prior distributions
-    tRecipLearnMale[choiceMale]<-(noise*tRecipLearnMale[choiceMale]+
+    tRecipLearnMale[choiceMale]<-(noise/5*tRecipLearnMale[choiceMale]+
                                   (tRecipSDMale[choiceMale]^2)*
                                   rnorm(nrow(choiceMale),
                                         maleAttMatrix[choiceMale],
-                                        sqrt(noise)))/
-      (noise+(tRecipSDMale[choiceMale]^2))
+                                        sqrt(noise/5)))/
+      (noise/5+(tRecipSDMale[choiceMale]^2))
     
-    tRecipLearnFemale[choiceFemale]<-(noise*tRecipLearnFemale[choiceFemale]+
+    tRecipLearnFemale[choiceFemale]<-(noise/5*tRecipLearnFemale[choiceFemale]+
                                   (tRecipSDFemale[choiceFemale]^2)*
                                   rnorm(nrow(choiceFemale),
                                         femaleAttMatrix[choiceFemale],
-                                        sqrt(noise)))/
-      (noise+(tRecipSDFemale[choiceFemale]^2))
+                                        sqrt(noise/5)))/
+      (noise/5+(tRecipSDFemale[choiceFemale]^2))
     
     #And update the standard deviation of the prior distribution
-    tRecipSDMale[choiceMale]<-sqrt((noise*tRecipSDMale[choiceMale]^2)/
-                                   (noise+tRecipSDMale[choiceMale]^2))
-    
-    tRecipSDFemale[choiceFemale]<-sqrt((noise*tRecipSDFemale[choiceFemale]^2)/
-                                       (noise+tRecipSDFemale[choiceFemale]^2))
+    tRecipSDMale[choiceMale]<-sqrt((noise/5*tRecipSDMale[choiceMale]^2)/
+                                   (noise/5+tRecipSDMale[choiceMale]^2))
+    tRecipSDFemale[choiceFemale]<-sqrt((noise/5*tRecipSDFemale[choiceFemale]^2)/
+                                       (noise/5+tRecipSDFemale[choiceFemale]^2))
     
     #Update observation counts
-    tRecipInvestMale[choiceMale]<-tRecipInvestMale[choiceMale]+1
-    tRecipInvestFemale[choiceFemale]<-tRecipInvestFemale[choiceFemale]+1
+    tRecipInvestMale[choiceMale]<-tRecipInvestMale[choiceMale]+5
+    tRecipInvestFemale[choiceFemale]<-tRecipInvestFemale[choiceFemale]+5
     
     #Update reciprocity histories
     tRecipHistMale<-(t(tRecipInvestFemale)/tRecipInvestMale)
     tRecipHistFemale<-(t(tRecipInvestMale)/tRecipInvestFemale)
+    
   
   }
     
@@ -361,7 +372,7 @@ for(r in 1:ngroups){
   ###Mate Choice###
   
   #No Learning Mate Choice#
-  
+    
   #A blank dataframe for storing the paired couples
   nlGpairs<-matrix(,1,(ncol(malesg)+ncol(femalesg)))
   nlGpairs<-as.data.frame(nlGpairs)
@@ -371,15 +382,15 @@ for(r in 1:ngroups){
   
   #Set MV perceptions equal to one random observation
   nlMaleAttMatrix<-matrix(rnorm(length(maleAttMatrix),
-                                       maleAttMatrix,
+                                maleAttMatrix,
                                 sqrt(noise)),
-                                 nrow(maleAttMatrix),
+                          nrow(maleAttMatrix),
                           ncol(maleAttMatrix))
   
   nlFemaleAttMatrix<-matrix(rnorm(length(femaleAttMatrix),
-                                         femaleAttMatrix,
+                                  femaleAttMatrix,
                                   sqrt(noise)),
-                                   nrow(femaleAttMatrix),
+                            nrow(femaleAttMatrix),
                             ncol(femaleAttMatrix))
   
   #Invest in proportion to observed MV
@@ -450,70 +461,36 @@ for(r in 1:ngroups){
   
   #Remove the first row of NAs
   nlGpairs<-nlGpairs[-1,]
+    
+    
   
   
   
   
-  
-  
-  ###UCB Mate Choice###
+  #Thompson Sampling Mate Choice#
   
   #A blank dataframe for storing the paired couples
-  ucbGpairs<-matrix(,1,(ncol(malesg)+ncol(femalesg)))
-  ucbGpairs<-as.data.frame(ucbGpairs)
+  thomGpairs<-matrix(,1,(ncol(malesg)+ncol(femalesg)))
+  thomGpairs<-as.data.frame(thomGpairs)
   
-  #Name the ucbGpairs dataframe for cbinding
-  colnames(ucbGpairs)<-c(colnames(femalesg),colnames(malesg))
-  
-  #Invest in proportion to perceived MV
-  investPropsMale<-t(apply(ucbInvestMale,1,function(x)
-    x*(10/sum(x))))
-  
-  investPropsFemale<-t(apply(ucbInvestFemale,1,function(x)
-    x*(10/sum(x))))
-  
-  #Loop through 50 timesteps for courtship
-  for(a in 1:50){
-    
-    #How much investment each male agent received
-    #from each female agent in the previous timestep
-    investProprMale<-t(investPropsFemale)
-    
-    #How much investment each female agent received
-    #from each male agent in the previous timestep
-    investProprFemale<-t(investPropsMale)
-    
-    #Calculate how much investment each agent will send in this round.
-    investPropsMale<-(investPropsMale*investProprMale)
-    investPropsFemale<-(investPropsFemale*investProprFemale)
-    
-    #Rescale investment
-    investPropsMale<-t(apply(investPropsMale,1,function(x)
-      x*(10/sum(x))))
-    
-    investPropsFemale<-t(apply(investPropsFemale,1,function(x)
-      x*(10/sum(x))))
-    
-    #Some models can produce NaNs. This just converts these to 0
-    investPropsMale[is.nan(investPropsMale)]<-0
-    investPropsFemale[is.nan(investPropsFemale)]<-0
-    
-  }
+  #Name the thomGpairs dataframe for cbinding
+  colnames(thomGpairs)<-c(colnames(femalesg),colnames(malesg))
   
   #Determine which female each male has chosen
   #Break ties randomly
   mChoice<-data.frame("male"=1:nrow(malesg))
-  mChoice$choice<-apply(investPropsMale,1,function(x)
+  mChoice$choice<-apply(thomInvestMale,1,function(x)
     resample(which(x==max(x)),1))
   
   #Determine which male each female has chosen
   #Break ties randomly
   fChoice<-data.frame("female"=1:nrow(femalesg))
-  fChoice$choice<-apply(investPropsFemale,1,function(x)
+  fChoice$choice<-apply(thomInvestFemale,1,function(x)
     resample(which(x==max(x)),1))
   
   #Loop through femalesg' choices
   for(p in 1:nrow(fChoice)){
+    
     #Determine the male chosen by the current focal female
     chosenMale<-fChoice$choice[p]
     
@@ -523,15 +500,15 @@ for(r in 1:ngroups){
     #If the chosen female is the focal female...
     if(chosenFemale==p){
       #Pair the male and female together
-      ucbGpairs<-rbind(ucbGpairs,cbind(femalesg[p,],malesg[chosenMale,]))
+      thomGpairs<-rbind(thomGpairs,cbind(femalesg[p,],malesg[chosenMale,]))
     }
     
     #Otherwise do nothing
     
   }
   
-  #Remove the row of NAs from the ucbGpairs dataframe
-  ucbGpairs<-ucbGpairs[-1,]
+  #Remove the row of NAs from the thomGpairs dataframe
+  thomGpairs<-thomGpairs[-1,]
   
   
   
@@ -539,7 +516,7 @@ for(r in 1:ngroups){
   
   
   ###RWTS Mate Choice###
-  
+
   #A blank dataframe for storing the paired couples
   tRecipGpairs<-matrix(,1,(ncol(malesg)+ncol(femalesg)))
   tRecipGpairs<-as.data.frame(tRecipGpairs)
@@ -559,7 +536,7 @@ for(r in 1:ngroups){
   fChoice$choice<-apply(tRecipInvestFemale,1,function(x)
     resample(which(x==max(x)),1))
   
-  #Loop through females' choices
+  #Loop through femalesg' choices
   for(p in 1:nrow(fChoice)){
     
     #Determine the male chosen by the current focal female
@@ -585,7 +562,7 @@ for(r in 1:ngroups){
   
   #Rbind each group's couples into the population couples dataframes
   nlPairs<-rbind(nlPairs,nlGpairs)
-  ucbPairs<-rbind(ucbPairs,ucbGpairs)
+  thomPairs<-rbind(thomPairs,thomGpairs)
   tRecipPairs<-rbind(tRecipPairs,tRecipGpairs)
   
 }
@@ -594,7 +571,7 @@ for(r in 1:ngroups){
 
 #Remove the unnecessary NAs from each pairs dataframe
 nlPairs<-nlPairs[-1,]
-ucbPairs<-ucbPairs[-1,]
+thomPairs<-thomPairs[-1,]
 tRecipPairs<-tRecipPairs[-1,]
 
 
@@ -603,8 +580,8 @@ tRecipPairs<-tRecipPairs[-1,]
 nlDataF<-nlPairs[,1:35]
 nlDataM<-nlPairs[,36:70]
 
-ucbDataF<-ucbPairs[,1:35]
-ucbDataM<-ucbPairs[,36:70]
+thomDataF<-thomPairs[,1:35]
+thomDataM<-thomPairs[,36:70]
 
 tRecipDataF<-tRecipPairs[,1:35]
 tRecipDataM<-tRecipPairs[,36:70]
@@ -615,8 +592,8 @@ tRecipDataM<-tRecipPairs[,36:70]
 nlDataF$mPIN<-nlDataM$PIN
 nlDataM$mPIN<-nlDataF$PIN
 
-ucbDataF$mPIN<-ucbDataM$PIN
-ucbDataM$mPIN<-ucbDataF$PIN
+thomDataF$mPIN<-thomDataM$PIN
+thomDataM$mPIN<-thomDataF$PIN
 
 tRecipDataF$mPIN<-tRecipDataM$PIN
 tRecipDataM$mPIN<-tRecipDataF$PIN
@@ -627,8 +604,8 @@ tRecipDataM$mPIN<-tRecipDataF$PIN
 nlDataF$model<-"nl"
 nlDataM$model<-"nl"
 
-ucbDataF$model<-"ucb"
-ucbDataM$model<-"ucb"
+thomDataF$model<-"thom"
+thomDataM$model<-"thom"
 
 tRecipDataF$model<-"tRecip"
 tRecipDataM$model<-"tRecip"
@@ -639,8 +616,8 @@ tRecipDataM$model<-"tRecip"
 data<-rbind(data,
             nlDataF,
             nlDataM,
-            ucbDataF,
-            ucbDataM,
+            thomDataF,
+            thomDataM,
             tRecipDataF,
             tRecipDataM)
 
