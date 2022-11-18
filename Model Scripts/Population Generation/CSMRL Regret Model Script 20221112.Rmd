@@ -48,7 +48,7 @@ tSDRecip<-.1
 #and Epsilon Reciprocal investment strategy
 #Chosen based on parameter tuning
 e<-.15
-eRegret<-.15
+eRecip<-.15
 
 
 
@@ -1528,9 +1528,9 @@ data2$model<-factor(data2$model,
                              "Epsilon Greedy",
                              "Thompson\nSampling",
                              "UCB",
-                             "Epsilon\nReciprocity",
-                             "Thompson\nReciprocity",
-                             "UCB\nReciprocity"))
+                             "Reciprocity-Weighted\nEpsilon",
+                             "Reciprocity-Weighted\nThompson",
+                             "Reciprocity-Weighted\nUCB"))
 
 #Melt data for plotting
 plotData<-melt(data2,id.vars=c("model","obs"))
