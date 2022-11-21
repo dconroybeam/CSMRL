@@ -15,7 +15,7 @@ output: html_document
 
 #Group Size#
 #Determines the size of the subgroups agents will be sorted into
-gsize<-1000
+gsize<-500
 
 
 
@@ -33,7 +33,6 @@ popsize<-gsize*ngroups
 #Thompson SD#
 #Starting SD for Thompson sampling and Thompson Reciprocal
 #Chosen based on parameter tuning
-tSD<-.1
 tRecipSD<-.1
 
 
@@ -125,7 +124,6 @@ mvCalc<-function(ideal,traits){
 
 
 
-
 #Improved Sampling#
 #A sample function that will return a single scalar if given it
 resample <- function(x,...){if(length(x)==1) x else sample(x,...)} 
@@ -155,8 +153,8 @@ males$PIN<-sample(1:nrow(males),nrow(males),replace=F)
 females$PIN<-sample(nrow(males):(nrow(males)+nrow(females)),nrow(females),replace=F)
 
 #Assign each male and female to a random population subgroup
-males$group<-sample(rep(1:ngroups,gsize/4))
-females$group<-sample(rep(1:ngroups,gsize/4))
+males$group<-sample(rep(1:ngroups,gsize/2))
+females$group<-sample(rep(1:ngroups,gsize/2))
 
 ```
 
@@ -179,7 +177,6 @@ data<-males[-(1:nrow(males)),]
 
 #Generate each model-specific dataframe by copying from the larger dataframe
 nlPairs<-popPairs
-thomPairs<-popPairs
 tRecipPairs<-popPairs
 
 for(r in 1:ngroups){
@@ -220,12 +217,6 @@ for(r in 1:ngroups){
   ###Learning Preparation###
   
   #Create dataframes to store learned attraction values
-  thomLearnMale<-matrix(1,nrow(malesg),nrow(femalesg))
-  thomLearnFemale<-matrix(1,nrow(femalesg),nrow(malesg))
-  
-  thomSDMale<-matrix(tSD,nrow(malesg),nrow(femalesg))
-  thomSDFemale<-matrix(tSD,nrow(femalesg),nrow(malesg))
-
   tRecipLearnMale<-matrix(1,nrow(malesg),nrow(femalesg))
   tRecipLearnFemale<-matrix(1,nrow(femalesg),nrow(malesg))
   
@@ -234,17 +225,11 @@ for(r in 1:ngroups){
   
   
   #Generate dataframes to store the number of visits
-  thomInvestMale<-matrix(1,nrow(malesg),nrow(femalesg))
-  thomInvestFemale<-matrix(1,nrow(femalesg),nrow(malesg))
-  
   tRecipInvestMale<-matrix(1,nrow(malesg),nrow(femalesg))
   tRecipInvestFemale<-matrix(1,nrow(femalesg),nrow(malesg))
   
   
   #Generate matrices to track history of reciprocity for RWTS
-  thomHistMale<-matrix(1,nrow(malesg),nrow(femalesg))
-  thomHistFemale<-matrix(1,nrow(femalesg),nrow(malesg))
-  
   tRecipHistMale<-matrix(1,nrow(malesg),nrow(femalesg))
   tRecipHistFemale<-matrix(1,nrow(femalesg),nrow(malesg))
   
@@ -255,62 +240,6 @@ for(r in 1:ngroups){
   #Loop through observation opportunities        
   for(o in 1:nobs){
 
-    #Thompson Sampling#
-      
-    #Draw a random MV value from each agent's prior distribution
-    thomDrawMale<-matrix(rnorm(length(thomLearnMale),
-                               thomLearnMale,
-                               thomSDMale),
-                         nrow(maleAttMatrix),
-                         ncol(maleAttMatrix))
-    
-    thomDrawFemale<-matrix(rnorm(length(thomLearnFemale),
-                                 thomLearnFemale,
-                                 thomSDFemale),
-                           nrow(femaleAttMatrix),
-                           ncol(femaleAttMatrix))
-    
-    #Choose the partner with the highest MV belief
-    choiceMale<-cbind(1:nrow(malesg),
-                      apply(thomDrawMale,1,function(x)
-                        resample(which(x==max(x)),1)))
-    
-    choiceFemale<-cbind(1:nrow(femalesg),
-                        apply(thomDrawFemale,1,function(x)
-                          resample(which(x==max(x)),1)))
-    
-    #Update the mean of agents' MV prior distributions
-    thomLearnMale[choiceMale]<-(noise/5*thomLearnMale[choiceMale]+
-                                  (thomSDMale[choiceMale]^2)*
-                                  rnorm(nrow(choiceMale),
-                                        maleAttMatrix[choiceMale],
-                                        sqrt(noise/5)))/
-      (noise/5+(thomSDMale[choiceMale]^2))
-    
-    thomLearnFemale[choiceFemale]<-(noise/5*thomLearnFemale[choiceFemale]+
-                                      (thomSDFemale[choiceFemale]^2)*
-                                      rnorm(nrow(choiceFemale),
-                                            femaleAttMatrix[choiceFemale],
-                                            sqrt(noise/5)))/
-      (noise/5+(thomSDFemale[choiceFemale]^2))
-    
-    
-    #And update the standard deviation of the prior distribution
-    thomSDMale[choiceMale]<-sqrt((noise/5*thomSDMale[choiceMale]^2)/
-                                   (noise/5+thomSDMale[choiceMale]^2))
-    
-    thomSDFemale[choiceFemale]<-sqrt((noise/5*thomSDFemale[choiceFemale]^2)/
-                                       (noise/5+thomSDFemale[choiceFemale]^2))
-    
-    #Update observation counts
-    thomInvestMale[choiceMale]<-thomInvestMale[choiceMale]+5
-    thomInvestFemale[choiceFemale]<-thomInvestFemale[choiceFemale]+5
-    
-    
-    
-    
-    
-    
     #Reciprocal Thompson Sampling#
     
     #Draw a random MV value from each agent's prior distribution
@@ -440,7 +369,7 @@ for(r in 1:ngroups){
   fChoice$choice<-apply(investPropsFemale,1,function(x)
     resample(which(x==max(x)),1))
   
-  #Loop through femalesg' choices
+  #Loop through females' choices
   for(p in 1:nrow(fChoice)){
     
     #Determine the male chosen by the current focal female
@@ -461,56 +390,8 @@ for(r in 1:ngroups){
   
   #Remove the first row of NAs
   nlGpairs<-nlGpairs[-1,]
+  
     
-    
-  
-  
-  
-  
-  #Thompson Sampling Mate Choice#
-  
-  #A blank dataframe for storing the paired couples
-  thomGpairs<-matrix(,1,(ncol(malesg)+ncol(femalesg)))
-  thomGpairs<-as.data.frame(thomGpairs)
-  
-  #Name the thomGpairs dataframe for cbinding
-  colnames(thomGpairs)<-c(colnames(femalesg),colnames(malesg))
-  
-  #Determine which female each male has chosen
-  #Break ties randomly
-  mChoice<-data.frame("male"=1:nrow(malesg))
-  mChoice$choice<-apply(thomInvestMale,1,function(x)
-    resample(which(x==max(x)),1))
-  
-  #Determine which male each female has chosen
-  #Break ties randomly
-  fChoice<-data.frame("female"=1:nrow(femalesg))
-  fChoice$choice<-apply(thomInvestFemale,1,function(x)
-    resample(which(x==max(x)),1))
-  
-  #Loop through femalesg' choices
-  for(p in 1:nrow(fChoice)){
-    
-    #Determine the male chosen by the current focal female
-    chosenMale<-fChoice$choice[p]
-    
-    #Determine the female chosen by the focal female's choice
-    chosenFemale<-mChoice$choice[chosenMale]
-    
-    #If the chosen female is the focal female...
-    if(chosenFemale==p){
-      #Pair the male and female together
-      thomGpairs<-rbind(thomGpairs,cbind(femalesg[p,],malesg[chosenMale,]))
-    }
-    
-    #Otherwise do nothing
-    
-  }
-  
-  #Remove the row of NAs from the thomGpairs dataframe
-  thomGpairs<-thomGpairs[-1,]
-  
-  
   
   
   
@@ -536,7 +417,7 @@ for(r in 1:ngroups){
   fChoice$choice<-apply(tRecipInvestFemale,1,function(x)
     resample(which(x==max(x)),1))
   
-  #Loop through femalesg' choices
+  #Loop through females' choices
   for(p in 1:nrow(fChoice)){
     
     #Determine the male chosen by the current focal female
@@ -562,7 +443,6 @@ for(r in 1:ngroups){
   
   #Rbind each group's couples into the population couples dataframes
   nlPairs<-rbind(nlPairs,nlGpairs)
-  thomPairs<-rbind(thomPairs,thomGpairs)
   tRecipPairs<-rbind(tRecipPairs,tRecipGpairs)
   
 }
@@ -571,7 +451,6 @@ for(r in 1:ngroups){
 
 #Remove the unnecessary NAs from each pairs dataframe
 nlPairs<-nlPairs[-1,]
-thomPairs<-thomPairs[-1,]
 tRecipPairs<-tRecipPairs[-1,]
 
 
@@ -579,9 +458,6 @@ tRecipPairs<-tRecipPairs[-1,]
 #Split each pairs dataframe into males and females
 nlDataF<-nlPairs[,1:35]
 nlDataM<-nlPairs[,36:70]
-
-thomDataF<-thomPairs[,1:35]
-thomDataM<-thomPairs[,36:70]
 
 tRecipDataF<-tRecipPairs[,1:35]
 tRecipDataM<-tRecipPairs[,36:70]
@@ -592,9 +468,6 @@ tRecipDataM<-tRecipPairs[,36:70]
 nlDataF$mPIN<-nlDataM$PIN
 nlDataM$mPIN<-nlDataF$PIN
 
-thomDataF$mPIN<-thomDataM$PIN
-thomDataM$mPIN<-thomDataF$PIN
-
 tRecipDataF$mPIN<-tRecipDataM$PIN
 tRecipDataM$mPIN<-tRecipDataF$PIN
 
@@ -603,9 +476,6 @@ tRecipDataM$mPIN<-tRecipDataF$PIN
 #Store the integration model responsible for each couple
 nlDataF$model<-"nl"
 nlDataM$model<-"nl"
-
-thomDataF$model<-"thom"
-thomDataM$model<-"thom"
 
 tRecipDataF$model<-"tRecip"
 tRecipDataM$model<-"tRecip"
@@ -616,8 +486,6 @@ tRecipDataM$model<-"tRecip"
 data<-rbind(data,
             nlDataF,
             nlDataM,
-            thomDataF,
-            thomDataM,
             tRecipDataF,
             tRecipDataM)
 
