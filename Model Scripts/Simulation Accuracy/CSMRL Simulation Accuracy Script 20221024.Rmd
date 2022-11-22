@@ -84,7 +84,7 @@ if(file.exists(mrPath)==F){
 
 #Number of Cores#
 #Number of CPU cores to use for the parallel loop
-clust<-makeCluster(detectCores()-1)
+clust<-makeCluster(detectCores()-4)
 registerDoParallel(clust)
 ```
 
@@ -137,8 +137,7 @@ mRepro<-foreach(s = samples,.combine=rbind) %dopar% {
                      "n"=rep(sizes,
                              each=length(models)),
                      "nl"=0,
-                     "recip"=0,
-                     "ucb"=0)
+                     "tRecip"=0)
   
   #Loop through sample sizes
   for(n in sizes){
@@ -447,7 +446,7 @@ mRepro<-foreach(s = samples,.combine=rbind) %dopar% {
 
       #Save results to mRepro in the appropriate spot
       mRepro[mRepro$model==models[m] & 
-               mRepro$n==n,5:7]<-colMeans(females[,41:43],na.rm=T)
+               mRepro$n==n,5:6]<-colMeans(females[,40:41],na.rm=T)
       mRepro$dt[mRepro$model==models[m] & 
                   mRepro$n==n]<-format(Sys.time(),format="%m%d%Y %H%M%S")
       
