@@ -1,0 +1,385 @@
+---
+title: "CSMRL Human Data Analysis Script 20221122"
+author: "Dan Conroy-Beam"
+date: "2022-11-22"
+output: html_document
+---
+
+
+
+######Packages######
+```{r}
+library(ggplot2)
+```
+
+
+
+
+
+
+######Data######
+```{r}
+#Load the data
+data<-read.csv("Human Data/Processed Data/CAREER1 Processed data 01172020 104258.csv")
+
+#Remove unnecessary columns
+data<-data[,c(1,3:4,6:8,10,235:250,345:360)]
+```
+
+
+
+
+
+
+######Parameters######
+```{r}
+
+#Perceptual Noise#
+#Noise in perception
+noisePerc<-c(0,.25,.5,.75)
+
+
+
+#Number of Observations#
+#Total number of observation opportunities agents will have in mate search
+nobs<-(nrow(data)/2)*30
+
+
+
+#Do you want to save figures?
+sf<-0
+```
+
+
+
+
+
+
+######Functions######
+```{r}
+
+#Attraction calculation#
+mvCalc<-function(ideal,traits){
+  #ideal is ideal preferences
+  #traits is actual trait values
+  
+  #Calculates Euclidean distance between preferences and traits
+  #Transforms this distance such that positive values are more attractive 
+  mv<-apply(traits,1,function(x) 
+    (-1*(dist(rbind(ideal,x)))+sqrt(10^2*16))/sqrt(10^2*16))
+  
+  return(mv)
+  
+}
+
+
+
+#Improved Sampling#
+#A sample function that will return a single scalar if given it
+resample <- function(x,...){if(length(x)==1) x else sample(x,...)}
+
+
+
+mateChoice<-function(data,noisePerc,model,param=.1){
+  
+  #Break data into females and males
+  females<-data[data$sex==0,]
+  males<-data[data$sex==1,]
+  
+  #Arrange by couple ID number
+  females<-females[order(females$CIN),]
+  males<-males[order(males$CIN),]
+  
+  #Determine the true relationships in this sample
+  trueRels<-cbind(females$PIN,males$PIN)
+  colnames(trueRels)<-c("female","male")
+
+  ###MV Calculation###
+      
+  #Males
+  #Calculate the true mate value of each female to each male
+  maleAttMatrix<-t(apply(males,1,function(q)
+    mvCalc(as.numeric(q[8:23]),females[,c(24:39)])))
+  
+  #Label these for ease of use
+  colnames(maleAttMatrix)<-females$PIN
+  rownames(maleAttMatrix)<-males$PIN
+  
+  #Females
+  #Calculate the true mate value of each male to each female
+  femaleAttMatrix<-t(apply(females,1,function(q)
+    mvCalc(as.numeric(q[8:23]),males[,c(24:39)])))
+  
+  #Label these for ease of use
+  colnames(femaleAttMatrix)<-males$PIN
+  rownames(femaleAttMatrix)<-females$PIN
+  
+  #Determine the amount of noise to add to MV perceptions
+  noise<-mean(c(var(c(maleAttMatrix)),
+                var(c(femaleAttMatrix))))*
+    (noisePerc/(1-noisePerc))
+  
+  
+  
+  #No Learning
+  if(model=="nl"){
+
+    #A blank dataframe for storing the paired couples
+    pairs<-matrix(,1,(ncol(males)+ncol(females)))
+    pairs<-as.data.frame(pairs)
+    
+    #Name the pairs dataframe for cbinding
+    colnames(pairs)<-c(colnames(females),colnames(males))
+    
+    #Set MV perceptions equal to one random observation
+    nlMaleAttMatrix<-matrix(rnorm(length(maleAttMatrix),
+                                  maleAttMatrix,
+                                  sqrt(noise)),
+                            nrow(maleAttMatrix),
+                            ncol(maleAttMatrix))
+    
+    nlFemaleAttMatrix<-matrix(rnorm(length(femaleAttMatrix),
+                                    femaleAttMatrix,
+                                    sqrt(noise)),
+                              nrow(femaleAttMatrix),
+                              ncol(femaleAttMatrix))
+    
+    #Invest in proportion to observed MV
+    investPropsMale<-t(apply(nlMaleAttMatrix,1,function(x)
+      x*(10/sum(x))))
+    
+    investPropsFemale<-t(apply(nlFemaleAttMatrix,1,function(x)
+      x*(10/sum(x))))
+    
+    #Loop through 50 timesteps for courtship
+    for(a in 1:50){
+      
+      #How much investment each male agent received
+      #from each female agent in the previous timestep
+      investProprMale<-t(investPropsFemale)
+      
+      #How much investment each female agent received
+      #from each male agent in the previous timestep
+      investProprFemale<-t(investPropsMale)
+      
+      #Calculate how much investment each agent will send in this round.
+      investPropsMale<-(investPropsMale*investProprMale)
+      investPropsFemale<-(investPropsFemale*investProprFemale)
+      
+      #Rescale investment
+      investPropsMale<-t(apply(investPropsMale,1,function(x)
+        x*(10/sum(x))))
+      
+      investPropsFemale<-t(apply(investPropsFemale,1,function(x)
+        x*(10/sum(x))))
+      
+      #Some models can produce NaNs. This just converts these to 0
+      investPropsMale[is.nan(investPropsMale)]<-0
+      investPropsFemale[is.nan(investPropsFemale)]<-0
+      
+    }
+    
+    #Determine which female each male has chosen
+    #Break ties randomly
+    mChoice<-data.frame("male"=1:nrow(males))
+    mChoice$choice<-apply(investPropsMale,1,function(x)
+      resample(which(x==max(x)),1))
+    
+    #Determine which male each female has chosen
+    #Break ties randomly
+    fChoice<-data.frame("female"=1:nrow(females))
+    fChoice$choice<-apply(investPropsFemale,1,function(x)
+      resample(which(x==max(x)),1))
+    
+    #Loop through females' choices
+    for(p in 1:nrow(fChoice)){
+      
+      #Determine the male chosen by the current focal female
+      chosenMale<-fChoice$choice[p]
+      
+      #Determine the female chosen by the focal female's choice
+      chosenFemale<-mChoice$choice[chosenMale]
+      
+      #If the chosen female is the focal female...
+      if(chosenFemale==p){
+        #Pair the male and female together
+        pairs<-rbind(pairs,cbind(females[p,],males[chosenMale,]))
+      }
+      
+      #Otherwise do nothing
+      
+    }
+    
+    #Remove the first row of NAs
+    pairs<-pairs[-1,]
+
+  }
+  
+  
+  
+  
+  
+  #Reciprocity-Weighted Thompson Sampling
+  if(model=="tRecip"){
+    
+    ###Learning Preparation###
+    
+    #Create dataframes to store learned attraction values
+    tRecipLearnMale<-matrix(1,nrow(males),nrow(females))
+    tRecipLearnFemale<-matrix(1,nrow(females),nrow(males))
+    
+    tRecipSDMale<-matrix(tRecipSD,nrow(males),nrow(females))
+    tRecipSDFemale<-matrix(tRecipSD,nrow(females),nrow(males))
+    
+    
+    #Generate dataframes to store the number of visits
+    tRecipInvestMale<-matrix(1,nrow(males),nrow(females))
+    tRecipInvestFemale<-matrix(1,nrow(females),nrow(males))
+    
+    
+    #Generate matrices to track history of reciprocity for RWTS
+    tRecipHistMale<-matrix(1,nrow(males),nrow(females))
+    tRecipHistFemale<-matrix(1,nrow(females),nrow(males))
+    
+    
+    
+    ###Learning Trials###
+    
+    #Loop through observation opportunities        
+    for(o in 1:nobs){
+  
+      #Reciprocal Thompson Sampling#
+      
+      #Draw a random MV value from each agent's prior distribution
+      tRecipDrawMale<-matrix(rnorm(length(tRecipLearnMale),
+                                   tRecipLearnMale,
+                                   tRecipSDMale),
+                            nrow(maleAttMatrix),
+                            ncol(maleAttMatrix))
+      
+      tRecipDrawFemale<-matrix(rnorm(length(tRecipLearnFemale),
+                                     tRecipLearnFemale,
+                                     tRecipSDFemale),
+                              nrow(femaleAttMatrix),
+                              ncol(femaleAttMatrix))
+      
+      #Choose the partner with the highest MV belief, weighted by reciprocity
+      choiceMale<-cbind(1:nrow(males),
+                        apply(tRecipDrawMale*tRecipHistMale,1,function(x) 
+                          resample(which(x==max(x)),1)))
+      
+      choiceFemale<-cbind(1:nrow(females),
+                          apply(tRecipDrawFemale*tRecipHistFemale,1,function(x) 
+                            resample(which(x==max(x)),1)))
+      
+      #Update the mean of agents' MV prior distributions
+      tRecipLearnMale[choiceMale]<-(noise*tRecipLearnMale[choiceMale]+
+                                    (tRecipSDMale[choiceMale]^2)*
+                                    rnorm(nrow(choiceMale),
+                                          maleAttMatrix[choiceMale],
+                                          sqrt(noise)))/
+        (noise+(tRecipSDMale[choiceMale]^2))
+      
+      tRecipLearnFemale[choiceFemale]<-(noise*tRecipLearnFemale[choiceFemale]+
+                                    (tRecipSDFemale[choiceFemale]^2)*
+                                    rnorm(nrow(choiceFemale),
+                                          femaleAttMatrix[choiceFemale],
+                                          sqrt(noise)))/
+        (noise+(tRecipSDFemale[choiceFemale]^2))
+      
+      #And update the standard deviation of the prior distribution
+      tRecipSDMale[choiceMale]<-sqrt((noise*tRecipSDMale[choiceMale]^2)/
+                                     (noise+tRecipSDMale[choiceMale]^2))
+      
+      tRecipSDFemale[choiceFemale]<-sqrt((noise*tRecipSDFemale[choiceFemale]^2)/
+                                         (noise+tRecipSDFemale[choiceFemale]^2))
+      
+      #Update observation counts
+      tRecipInvestMale[choiceMale]<-tRecipInvestMale[choiceMale]+1
+      tRecipInvestFemale[choiceFemale]<-tRecipInvestFemale[choiceFemale]+1
+      
+      #Update reciprocity histories
+      tRecipHistMale<-(t(tRecipInvestFemale)/tRecipInvestMale)
+      tRecipHistFemale<-(t(tRecipInvestMale)/tRecipInvestFemale)
+      
+    
+    }
+    
+    
+    
+    ###Mate Choice###
+    
+    #A blank dataframe for storing the paired couples
+    pairs<-matrix(,1,(ncol(males)+ncol(females)))
+    pairs<-as.data.frame(pairs)
+    
+    #Name the pairs dataframe for cbinding
+    colnames(pairs)<-c(colnames(females),colnames(males))
+    
+    #Determine which female each male has chosen
+    #Break ties randomly
+    mChoice<-data.frame("male"=1:nrow(males))
+    mChoice$choice<-apply(tRecipInvestMale,1,function(x)
+      resample(which(x==max(x)),1))
+    
+    #Determine which male each female has chosen
+    #Break ties randomly
+    fChoice<-data.frame("female"=1:nrow(females))
+    fChoice$choice<-apply(tRecipInvestFemale,1,function(x)
+      resample(which(x==max(x)),1))
+    
+    #Loop through females' choices
+    for(p in 1:nrow(fChoice)){
+      
+      #Determine the male chosen by the current focal female
+      chosenMale<-fChoice$choice[p]
+      
+      #Determine the female chosen by the focal female's choice
+      chosenFemale<-mChoice$choice[chosenMale]
+      
+      #If the chosen female is the focal female...
+      if(chosenFemale==p){
+        #Pair the male and female together
+        pairs<-rbind(pairs,cbind(females[p,],males[chosenMale,]))
+      }
+      
+      #Otherwise do nothing
+      
+    }
+    
+    #Remove the row of NAs from the pairs dataframe
+    pairs<-pairs[-1,]
+      
+  }
+  
+  
+  
+  #Determine the PINs of all guessed pairs
+  rels<-data.frame("females"=pairs[,2],"males"=pairs[,41])
+  
+  #Store the PIN of each female's mate
+  females$mPIN<-males$PIN
+
+  #Store the mate guessed by each model for each female
+  females$guess<-rels$males[match(females$PIN,rels$females)]
+
+
+  #Calculate the accuracy of guesses
+  females$acc<-ifelse(is.na(females$guess)==F,
+                        females$guess==females$mPIN,F)
+
+  
+  #Output accuracy as a function of CIN
+  return(females[,c(1,42)])
+    
+}
+```
+
+
+
+
+
+
+
+
+
