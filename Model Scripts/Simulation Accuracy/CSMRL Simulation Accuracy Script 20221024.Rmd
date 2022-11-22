@@ -74,7 +74,7 @@ nobs<-(sizes*30)/5
 mrPath<-"Model Outputs/Simulation Accuracy/CSMRL Simulation Accuracy Results.csv"
 
 if(file.exists(mrPath)==F){
-    mRepro<-data.frame("dt"=NA,"modelLoop"=NA,"model"=NA,"n"=NA,"nl"=NA,"recip"=NA,"ucb"=NA)
+    mRepro<-data.frame("dt"=NA,"modelLoop"=NA,"model"=NA,"n"=NA,"nl"=NA,"tRecip"=NA)
     
     write.csv(mRepro,mrPath,row.names=F)
 
