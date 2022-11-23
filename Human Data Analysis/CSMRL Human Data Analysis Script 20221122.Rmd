@@ -89,10 +89,6 @@ mateChoice<-function(data,noisePerc,model,param=.1){
   #Arrange by couple ID number
   females<-females[order(females$CIN),]
   males<-males[order(males$CIN),]
-  
-  #Determine the true relationships in this sample
-  trueRels<-cbind(females$PIN,males$PIN)
-  colnames(trueRels)<-c("female","male")
 
   ###MV Calculation###
       
@@ -115,9 +111,15 @@ mateChoice<-function(data,noisePerc,model,param=.1){
   rownames(femaleAttMatrix)<-females$PIN
   
   #Determine the amount of noise to add to MV perceptions
-  noise<-mean(c(var(c(maleAttMatrix)),
+  
+  if(noisePerc>0){
+      noise<-mean(c(var(c(maleAttMatrix)),
                 var(c(femaleAttMatrix))))*
     (noisePerc/(1-noisePerc))
+  } else {
+    noise<-0
+  }
+
   
   
   
@@ -228,8 +230,8 @@ mateChoice<-function(data,noisePerc,model,param=.1){
     tRecipLearnMale<-matrix(1,nrow(males),nrow(females))
     tRecipLearnFemale<-matrix(1,nrow(females),nrow(males))
     
-    tRecipSDMale<-matrix(tRecipSD,nrow(males),nrow(females))
-    tRecipSDFemale<-matrix(tRecipSD,nrow(females),nrow(males))
+    tRecipSDMale<-matrix(param,nrow(males),nrow(females))
+    tRecipSDFemale<-matrix(param,nrow(females),nrow(males))
     
     
     #Generate dataframes to store the number of visits
@@ -380,6 +382,11 @@ mateChoice<-function(data,noisePerc,model,param=.1){
 
 
 
+######Analysis######
+```{r}
 
+
+
+```
 
 
