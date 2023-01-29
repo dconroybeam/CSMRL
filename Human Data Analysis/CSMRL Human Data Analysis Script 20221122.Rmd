@@ -34,9 +34,14 @@ data<-data[,c(1,3:4,6:8,10,235:250,345:360)]
 ######Parameters######
 ```{r}
 
+#Set Seed#
+#Set seed for reproducibility
+set.seed(20230129)
+
+
 #Perceptual Noise#
 #Noise in perception
-noisePerc<-c(0,.25,.5,.75)
+noisePerc<-c(0.001,.25,.5,.75)
 
 
 
@@ -385,8 +390,37 @@ mateChoice<-function(data,noisePerc,model,param=.1){
 ######Analysis######
 ```{r}
 
+#Compute simulation accuracy across noise levels for the no learning model
+csmNL<-lapply(noisePerc,function(x)
+  mateChoice(data,x,"nl"))
 
+#Compute simulation accuracy across noise levels for the Thompson Reciprocity model
+csmtRecip<-lapply(noisePerc,function(x) 
+  mateChoice(data,x,"tRecip"))
 
+#Create a dataframe for simulation accuracy results
+accMat<-data.frame("model"=rep(c("nl","tRecip"),each=4),
+                   "noise"=rep(noisePerc,times=2),
+                   "acc"=0,"lci"=0,"uci"=0)
+
+accMat$acc<-c(sapply(csmNL,function(x) mean(x$acc)),
+              sapply(csmtRecip,function(x) mean(x$acc)))
+
+accMat$lci<-c(sapply(csmNL,function(x)
+  quantile(sapply(1:10000,function(y) mean(sample(x$acc,replace=T))),.025)
+  ),
+  sapply(csmtRecip,function(x)
+  quantile(sapply(1:10000,function(y) mean(sample(x$acc,replace=T))),.025)
+  )
+  )
+
+accMat$uci<-c(sapply(csmNL,function(x)
+  quantile(sapply(1:10000,function(y) mean(sample(x$acc,replace=T))),.975)
+  ),
+  sapply(csmtRecip,function(x)
+  quantile(sapply(1:10000,function(y) mean(sample(x$acc,replace=T))),.975)
+  )
+  )
 ```
 
 
