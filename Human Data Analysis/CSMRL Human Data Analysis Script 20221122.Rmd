@@ -424,3 +424,34 @@ accMat$uci<-c(sapply(csmNL,function(x)
 ```
 
 
+
+
+
+
+######Plotting######
+```{r}
+
+accMat$noise<-factor(accMat$noise,labels=paste0("Noise = ",100*unique(accMat$noise),"%"))
+
+accPlot<-qplot(model,acc*100,data=accMat,
+               label=round(acc*100,2),
+               fill=model,
+               geom="blank",
+               xlab="RL Model",ylab="Simulation Accuracy")+
+  geom_bar(stat="identity")+
+  theme_classic(base_size=18)+
+  scale_fill_discrete(guide='none')+
+  coord_cartesian(ylim=c(0,100))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  geom_text(size=10,vjust=-2)+
+  geom_errorbar(aes(ymin=lci,ymax=uci))+
+  facet_wrap(~noise,ncol=4)+
+  scale_x_discrete(labels=c("NL","THM"))
+
+
+if(sf==1){
+  ggsave("Figures/CSMRL Human Accuracy Plot.tiff",accPlot,
+         width=13,height=5,units="in",dpi=300)
+}
+
+```
