@@ -444,7 +444,7 @@ accPlot<-qplot(model,acc*100,data=accMat,
   coord_cartesian(ylim=c(0,100))+
   scale_y_continuous(breaks=seq(0,100,10))+
   geom_text(size=10,vjust=-2)+
-  geom_errorbar(aes(ymin=lci,ymax=uci))+
+  geom_errorbar(aes(ymin=lci*100,ymax=uci*100))+
   facet_wrap(~noise,ncol=4)+
   scale_x_discrete(labels=c("NL","THM"))
 
