@@ -1419,7 +1419,7 @@ for(l in 1:loops){
   
   
   #Label what model produced each set of data
-  nlRels$model<-"No Learning"
+  nlRels$model<-"Non-Learning"
   epsilRels$model<-"Epsilon Greedy"
   ucbRels$model<-"UCB"
   thomRels$model<-"Thompson\nSampling"
@@ -1486,38 +1486,57 @@ data2$r<-c(tapply(data$r,
 
 #Reorder model levels
 data2$model<-factor(data2$model,
-                    levels=c("No Learning",
+                    levels=c("Non-Learning",
                              "Epsilon Greedy",
                              "Thompson\nSampling",
                              "UCB",
                              "Epsilon\nReciprocity",
-                             "Thompson\nReciprocity",
-                             "UCB\nReciprocity"))
+                             "UCB\nReciprocity",
+                             "Thompson\nReciprocity"),
+                    labels=c("Non-Learning",
+                             "Epsilon Greedy",
+                             "Thom. Sampling",
+                             "UCB",
+                             "Epsil. Reciprocity",
+                             "UCB Reciprocity",
+                             "Thomp. Reciprocity"))
 
 #Melt data for plotting
 plotData<-melt(data2,id.vars=c("model","obs"))
 
+
+#Create labels for plot facets
+facetLabs<-c("Simulation Accuracy (%)",
+             "Assortative Mating (r)")
+
+names(facetLabs)<-c("acc","r")
+
+#Create a variable for reference lines
+plotData$hline<-rep(c(1,fullAssort),each=nrow(plotData)/2)
+
 #Plot average assortative mating and simulation accuracy across models and observations
-regretPlot<-qplot(obs,
-                  value,
-                  color=variable,
-                  data=plotData,
-                  xlab="Number of Observations",
-                  ylab="Average Value")+
-  geom_line()+
-  theme_grey(base_size=20)+
-  scale_color_discrete(name="Outcome",
-                       labels=c("Simulation\nAccuracy (%)",
-                                "Assortative\nMating (r)"))+
-  facet_wrap(~model,ncol=4)+
-  geom_hline(yintercept=1,color="#F8766D",linetype="dashed",lwd=1)+
-  geom_hline(yintercept=fullAssort,color="#00BFC4",linetype="dashed",lwd=1)
+regretPlot <- ggplot(data = plotData,
+                     aes(x = obs,
+                         y = value,
+                         color = model)) +
+  labs(x = "Number of Observations",
+       y = "Average Value",
+       color = "RL Model") +
+  geom_line(lwd=2) +
+  theme_grey(base_size = 25) +
+  facet_wrap( ~ variable, ncol = 2,
+              labeller = labeller(variable = facetLabs)) +
+  geom_hline(aes(yintercept=hline),
+    linetype = "dashed",
+    lwd = 1
+  ) +
+  scale_x_continuous(breaks = seq(2000, 10000, 2000))
 
 
 write.csv(data2,"Model Outputs/Regret Models/CSMRL Regret Results.csv",row.names=F)
 
 ggsave("Figures/CSMRL Regret Model Results.tiff",plot=regretPlot,
-       width=14,height=10,units="in",dpi=300)
+       width=16,height=10,units="in",dpi=300)
 
 ```
 

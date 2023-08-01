@@ -446,7 +446,7 @@ accPlot<-qplot(model,acc*100,data=accMat,
   geom_text(size=10,vjust=-2)+
   geom_errorbar(aes(ymin=lci*100,ymax=uci*100))+
   facet_wrap(~noise,ncol=4)+
-  scale_x_discrete(labels=c("NL","THM"))
+  scale_x_discrete(labels=c("Non-Learning","RWTS"))
 
 
 if(sf==1){

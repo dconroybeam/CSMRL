@@ -48,7 +48,7 @@ models<-unique(data$trueModel)
 sizes<-sort(unique(data$n))
 
 #Save figures?
-sf<-1
+sf<-0
 ```
 
 
@@ -118,11 +118,11 @@ colnames(confusion)<-c("n","trueModel","model","p")
 #Relabel factor levels
 confusion$trueModel<-factor(confusion$trueModel,
                             levels=c("nl","tRecip"),
-                            labels=c("No Learning","RWTS"))
+                            labels=c("Non-Learning","RWTS"))
 
 confusion$model<-factor(confusion$model,
                         levels=c("nl","tRecip"),
-                        labels=c("No Learning","RWTS"))
+                        labels=c("Non-Learning","RWTS"))
 
 
 #Plotting all confusion matrices (and storing them in lists)
@@ -183,11 +183,11 @@ plotData$accuracy<-as.vector(
 #Relabel factor levels
 plotData$trueModel<-factor(plotData$trueModel,
                             levels=c("nl","tRecip"),
-                            labels=c("No Learning","RWTS"))
+                            labels=c("Non-Learning","RWTS"))
 
 plotData$model<-factor(plotData$model,
                             levels=c("nl","tRecip"),
-                            labels=c("No Learning","RWTS"))
+                            labels=c("Non-Learning","RWTS"))
 
 
 #Another horrible, ugly line
@@ -234,7 +234,7 @@ accPlot<-qplot(trueModel,accuracy,fill=model,
 if(sf==1){
   
   ggsave("Figures/CSMRL Accuracy Plot.tiff",accPlot,
-         width=12,height=6,units="in",dpi=300)
+         width=6,height=6,units="in",dpi=300)
   
 }
 
