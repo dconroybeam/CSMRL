@@ -1495,11 +1495,11 @@ data2$model<-factor(data2$model,
                              "Thompson\nReciprocity"),
                     labels=c("Non-Learning",
                              "Epsilon Greedy",
-                             "Thom. Sampling",
+                             "Thompson Sampling",
                              "UCB",
-                             "Epsil. Reciprocity",
-                             "UCB Reciprocity",
-                             "Thomp. Reciprocity"))
+                             "RWEG",
+                             "RWUCB",
+                             "RWTS"))
 
 #Melt data for plotting
 plotData<-melt(data2,id.vars=c("model","obs"))
