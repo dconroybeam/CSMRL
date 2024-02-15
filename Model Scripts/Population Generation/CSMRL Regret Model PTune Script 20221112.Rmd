@@ -278,30 +278,19 @@ for(p in 1:nrow(fChoice)){
 fullPairs<-fullPairs[-1,]
 
 
-#Determine Assortative Mating#
+#Extract mated PINs for females
+fRels<-data.frame("PIN"=females$PIN)
+fRels$mPIN<-fullPairs[match(females$PIN,fullPairs[,34]),68]
 
-#Calculate average male and female prefs
-malePrefs<-colMeans(males[,2:17])
-femalePrefs<-colMeans(females[,2:17])
+#Do the same for males
+mRels<-data.frame("PIN"=males$PIN)
+mRels$mPIN<-fullPairs[match(males$PIN,fullPairs[,68]),34]
 
-#Extract mated PINs
-fullRels<-fullPairs[,c(34,68)]
-colnames(fullRels)<-c("femalePIN","malePIN")
+#Rbind together
+fullRels<-rbind(fRels,mRels)
 
-#Calculate male and female MVs
-fullRels$femaleMV<-sapply(fullRels$femalePIN,function(x) 
-  mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
-  )
-
-fullRels$maleMV<-sapply(fullRels$malePIN,function(x) 
-  mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
-  )
-
-#Calculate correlation between male and female MVs
-fullAssort<-cor(fullRels$femaleMV,fullRels$maleMV)
-
-#Store the assortative mating correlation in the dataframe
-fullRels$r<-fullAssort
+#Set mated PINs of single agents to 0
+fullRels$mPIN[is.na(fullRels$mPIN)]<-0
 
 #Create a vector to track observations
 #In the full information case, there is just 1 observation necessary
@@ -816,24 +805,19 @@ for(s in 1:5){
       #Remove the row of NAs from the epsilPairs dataframe
       epsilPairs<-epsilPairs[-1,]
       
-      #Extract mated PINs
-      epsilBlockRels<-epsilPairs[,c(34,68)]
-      colnames(epsilBlockRels)<-c("femalePIN","malePIN")
+      #Extract mated PINs for females
+      fRels<-data.frame("PIN"=females$PIN)
+      fRels$mPIN<-epsilPairs[match(females$PIN,epsilPairs[,34]),68]
       
-      #Calculate male and female MVs
-      epsilBlockRels$femaleMV<-sapply(epsilBlockRels$femalePIN,function(x) 
-        mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
-        )
+      #Do the same for males
+      mRels<-data.frame("PIN"=males$PIN)
+      mRels$mPIN<-epsilPairs[match(males$PIN,epsilPairs[,68]),34]
       
-      epsilBlockRels$maleMV<-sapply(epsilBlockRels$malePIN,function(x) 
-        mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
-        )
+      #Rbind together
+      epsilBlockRels<-rbind(fRels,mRels)
       
-      #Calculate correlation between male and female MVs
-      epsilAssort<-cor(epsilBlockRels$femaleMV,epsilBlockRels$maleMV)
-      
-      #Store the correlation
-      epsilBlockRels$r<-epsilAssort
+      #Set mated PINs of single agents to 0
+      epsilBlockRels$mPIN[is.na(epsilBlockRels$mPIN)]<-0
       
       #Label with the observation block
       epsilBlockRels$obs<-b*1000
@@ -924,24 +908,19 @@ for(s in 1:5){
       #Remove the row of NAs from the ucbPairs dataframe
       ucbPairs<-ucbPairs[-1,]
       
-      #Extract mated PINs
-      ucbBlockRels<-ucbPairs[,c(34,68)]
-      colnames(ucbBlockRels)<-c("femalePIN","malePIN")
+      #Extract mated PINs for females
+      fRels<-data.frame("PIN"=females$PIN)
+      fRels$mPIN<-ucbPairs[match(females$PIN,ucbPairs[,34]),68]
       
-      #Calculate male and female MVs
-      ucbBlockRels$femaleMV<-sapply(ucbBlockRels$femalePIN,function(x) 
-        mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
-        )
+      #Do the same for males
+      mRels<-data.frame("PIN"=males$PIN)
+      mRels$mPIN<-ucbPairs[match(males$PIN,ucbPairs[,68]),34]
       
-      ucbBlockRels$maleMV<-sapply(ucbBlockRels$malePIN,function(x) 
-        mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
-        )
+      #Rbind together
+      ucbBlockRels<-rbind(fRels,mRels)
       
-      #Calculate correlation between male and female MVs
-      ucbAssort<-cor(ucbBlockRels$femaleMV,ucbBlockRels$maleMV)
-      
-      #Store the correlation
-      ucbBlockRels$r<-ucbAssort
+      #Set mated PINs of single agents to 0
+      ucbBlockRels$mPIN[is.na(ucbBlockRels$mPIN)]<-0
       
       #Label with the observation block
       ucbBlockRels$obs<-b*1000
@@ -1032,24 +1011,19 @@ for(s in 1:5){
       #Remove the row of NAs from the thomPairs dataframe
       thomPairs<-thomPairs[-1,]
       
-      #Extract mated PINs
-      thomBlockRels<-thomPairs[,c(34,68)]
-      colnames(thomBlockRels)<-c("femalePIN","malePIN")
+      #Extract mated PINs for females
+      fRels<-data.frame("PIN"=females$PIN)
+      fRels$mPIN<-thomPairs[match(females$PIN,thomPairs[,34]),68]
       
-      #Calculate male and female MVs
-      thomBlockRels$femaleMV<-sapply(thomBlockRels$femalePIN,function(x) 
-        mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
-        )
+      #Do the same for males
+      mRels<-data.frame("PIN"=males$PIN)
+      mRels$mPIN<-thomPairs[match(males$PIN,thomPairs[,68]),34]
       
-      thomBlockRels$maleMV<-sapply(thomBlockRels$malePIN,function(x) 
-        mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
-        )
+      #Rbind together
+      thomBlockRels<-rbind(fRels,mRels)
       
-      #Calculate correlation between male and female MVs
-      thomAssort<-cor(thomBlockRels$femaleMV,thomBlockRels$maleMV)
-      
-      #Store the correlation
-      thomBlockRels$r<-thomAssort
+      #Set mated PINs of single agents to 0
+      thomBlockRels$mPIN[is.na(thomBlockRels$mPIN)]<-0
       
       #Label with the observation block
       thomBlockRels$obs<-b*1000
@@ -1102,24 +1076,19 @@ for(s in 1:5){
       #Remove the row of NAs from the eRecipPairs dataframe
       eRecipPairs<-eRecipPairs[-1,]
       
-      #Extract mated PINs
-      eRecipBlockRels<-eRecipPairs[,c(34,68)]
-      colnames(eRecipBlockRels)<-c("femalePIN","malePIN")
+      #Extract mated PINs for females
+      fRels<-data.frame("PIN"=females$PIN)
+      fRels$mPIN<-eRecipPairs[match(females$PIN,eRecipPairs[,34]),68]
       
-      #Calculate male and female MVs
-      eRecipBlockRels$femaleMV<-sapply(eRecipBlockRels$femalePIN,function(x) 
-        mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
-        )
+      #Do the same for males
+      mRels<-data.frame("PIN"=males$PIN)
+      mRels$mPIN<-eRecipPairs[match(males$PIN,eRecipPairs[,68]),34]
       
-      eRecipBlockRels$maleMV<-sapply(eRecipBlockRels$malePIN,function(x) 
-        mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
-        )
+      #Rbind together
+      eRecipBlockRels<-rbind(fRels,mRels)
       
-      #Calculate correlation between male and female MVs
-      eRecipAssort<-cor(eRecipBlockRels$femaleMV,eRecipBlockRels$maleMV)
-      
-      #Store the correlation
-      eRecipBlockRels$r<-eRecipAssort
+      #Set mated PINs of single agents to 0
+      eRecipBlockRels$mPIN[is.na(eRecipBlockRels$mPIN)]<-0
       
       #Label with the observation block
       eRecipBlockRels$obs<-b*1000
@@ -1172,24 +1141,19 @@ for(s in 1:5){
       #Remove the row of NAs from the uRecipPairs dataframe
       uRecipPairs<-uRecipPairs[-1,]
       
-      #Extract mated PINs
-      uRecipBlockRels<-uRecipPairs[,c(34,68)]
-      colnames(uRecipBlockRels)<-c("femalePIN","malePIN")
+      #Extract mated PINs for females
+      fRels<-data.frame("PIN"=females$PIN)
+      fRels$mPIN<-uRecipPairs[match(females$PIN,uRecipPairs[,34]),68]
       
-      #Calculate male and female MVs
-      uRecipBlockRels$femaleMV<-sapply(uRecipBlockRels$femalePIN,function(x) 
-        mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
-        )
+      #Do the same for males
+      mRels<-data.frame("PIN"=males$PIN)
+      mRels$mPIN<-uRecipPairs[match(males$PIN,uRecipPairs[,68]),34]
       
-      uRecipBlockRels$maleMV<-sapply(uRecipBlockRels$malePIN,function(x) 
-        mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
-        )
+      #Rbind together
+      uRecipBlockRels<-rbind(fRels,mRels)
       
-      #Calculate correlation between male and female MVs
-      uRecipAssort<-cor(uRecipBlockRels$femaleMV,uRecipBlockRels$maleMV)
-      
-      #Store the correlation
-      uRecipBlockRels$r<-uRecipAssort
+      #Set mated PINs of single agents to 0
+      uRecipBlockRels$mPIN[is.na(uRecipBlockRels$mPIN)]<-0
       
       #Label with the observation block
       uRecipBlockRels$obs<-b*1000
@@ -1242,24 +1206,19 @@ for(s in 1:5){
       #Remove the row of NAs from the tRecipPairs dataframe
       tRecipPairs<-tRecipPairs[-1,]
       
-      #Extract mated PINs
-      tRecipBlockRels<-tRecipPairs[,c(34,68)]
-      colnames(tRecipBlockRels)<-c("femalePIN","malePIN")
+      #Extract mated PINs for females
+      fRels<-data.frame("PIN"=females$PIN)
+      fRels$mPIN<-tRecipPairs[match(females$PIN,tRecipPairs[,34]),68]
       
-      #Calculate male and female MVs
-      tRecipBlockRels$femaleMV<-sapply(tRecipBlockRels$femalePIN,function(x) 
-        mvCalc(malePrefs,females[females$PIN==x,c(18:33)])
-        )
+      #Do the same for males
+      mRels<-data.frame("PIN"=males$PIN)
+      mRels$mPIN<-tRecipPairs[match(males$PIN,tRecipPairs[,68]),34]
       
-      tRecipBlockRels$maleMV<-sapply(tRecipBlockRels$malePIN,function(x) 
-        mvCalc(femalePrefs,males[males$PIN==x,c(18:33)])
-        )
+      #Rbind together
+      tRecipBlockRels<-rbind(fRels,mRels)
       
-      #Calculate correlation between male and female MVs
-      tRecipAssort<-cor(tRecipBlockRels$femaleMV,tRecipBlockRels$maleMV)
-      
-      #Store the correlation
-      tRecipBlockRels$r<-tRecipAssort
+      #Set mated PINs of single agents to 0
+      tRecipBlockRels$mPIN[is.na(tRecipBlockRels$mPIN)]<-0
       
       #Label with the observation block
       tRecipBlockRels$obs<-b*1000
@@ -1269,24 +1228,24 @@ for(s in 1:5){
       
     }
     
-    #Compute accuracy of matches relative to full information
-    epsilRels$acc<-epsilRels$malePIN==fullRels$malePIN[
-      match(epsilRels$femalePIN,fullRels$femalePIN)]
+      #Compute accuracy of matches relative to full information
+    epsilRels$acc<-epsilRels$mPIN==fullRels$mPIN[
+      match(epsilRels$PIN,fullRels$PIN)]
     
-    ucbRels$acc<-ucbRels$malePIN==fullRels$malePIN[
-      match(ucbRels$femalePIN,fullRels$femalePIN)]
+    ucbRels$acc<-ucbRels$mPIN==fullRels$mPIN[
+      match(ucbRels$PIN,fullRels$PIN)]
     
-    thomRels$acc<-thomRels$malePIN==fullRels$malePIN[
-      match(thomRels$femalePIN,fullRels$femalePIN)]
+    thomRels$acc<-thomRels$mPIN==fullRels$mPIN[
+      match(thomRels$PIN,fullRels$PIN)]
     
-    eRecipRels$acc<-eRecipRels$malePIN==fullRels$malePIN[
-      match(eRecipRels$femalePIN,fullRels$femalePIN)]
+    eRecipRels$acc<-eRecipRels$mPIN==fullRels$mPIN[
+      match(eRecipRels$PIN,fullRels$PIN)]
     
-    uRecipRels$acc<-uRecipRels$malePIN==fullRels$malePIN[
-      match(uRecipRels$femalePIN,fullRels$femalePIN)]
+    uRecipRels$acc<-uRecipRels$mPIN==fullRels$mPIN[
+      match(uRecipRels$PIN,fullRels$PIN)]
     
-    tRecipRels$acc<-tRecipRels$malePIN==fullRels$malePIN[
-      match(tRecipRels$femalePIN,fullRels$femalePIN)]
+    tRecipRels$acc<-tRecipRels$mPIN==fullRels$mPIN[
+      match(tRecipRels$PIN,fullRels$PIN)]
     
     #Label what model produced each set of data
     epsilRels$model<-"Epsilon Greedy"
@@ -1301,9 +1260,6 @@ for(s in 1:5){
     relData<-rbind(epsilRels,thomRels,
                    ucbRels,eRecipRels,tRecipRels,uRecipRels)
     
-    #Convert NA accuracies to zeroes:
-    relData$acc<-ifelse(is.na(relData$acc),0,relData$acc)
-    
     #Create a dataframe for summarized results
     loopData<-data.frame("s"=s,"loop"=l,"model"=rep(sort(unique(relData$model)),
                                      each=length(unique(relData$obs))),
@@ -1314,11 +1270,6 @@ for(s in 1:5){
     loopData$acc<-c(tapply(relData$acc,list(relData$obs,relData$model),
                            function(x)
                              mean(x)))
-    
-    #Compute average assortative mating across models and observation blocks
-    loopData$r<-c(tapply(relData$r,list(relData$obs,relData$model),
-                         function(x) 
-                           mean(x)))
     
     #Rbind this loop's data into the full dataframe
     data<-rbind(data,loopData)
@@ -1377,13 +1328,13 @@ ePlotData<-plotData[plotData$model %in% c("Epsilon Greedy",
 ePlotData$param<-e[ePlotData$param]
 
 #Plot average simulation accuracy across models, observations, and parameter settings
-eRegretPlot<-qplot(obs,
-                  value,
-                  color=as.factor(param),
-                  group=as.factor(param),
-                  data=ePlotData,
-                  xlab="Number of Observations",
-                  ylab="Value")+
+eRegretPlot<-ggplot(data=ePlotData,
+                    aes(x=obs,
+                        y=value,
+                        color=as.factor(param),
+                        group=as.factor(param)))+
+  labs(x="Number of Observations",
+       y="Simulation Accuracy")+
   geom_line()+
   theme_grey(base_size=20)+
   scale_color_discrete(name="Parameter Setting")+
@@ -1401,13 +1352,13 @@ tPlotData<-plotData[plotData$model %in% c("Thompson\nSampling",
 tPlotData$param<-tSD[tPlotData$param]
 
 #Plot average simulation accuracy across models, observations, and parameter settings
-tRegretPlot<-qplot(obs,
-                  value,
-                  color=as.factor(param),
-                  group=as.factor(param),
-                  data=tPlotData,
-                  xlab="Number of Observations",
-                  ylab="Value")+
+tRegretPlot<-ggplot(data=tPlotData,
+                    aes(x=obs,
+                        y=value,
+                        color=as.factor(param),
+                        group=as.factor(param)))+
+  labs(x="Number of Observations",
+       y="Simulation Accuracy")+
   geom_line()+
   theme_grey(base_size=20)+
   scale_color_discrete(name="Parameter Setting")+
@@ -1424,13 +1375,13 @@ uPlotData<-plotData[plotData$model %in% c("UCB","UCB\nReciprocity"),]
 uPlotData$param<-c[uPlotData$param]
 
 #Plot average simulation accuracy across models, observations, and parameter settings
-uRegretPlot<-qplot(obs,
-                  value,
-                  color=as.factor(param),
-                  group=as.factor(param),
-                  data=uPlotData,
-                  xlab="Number of Observations",
-                  ylab="Value")+
+uRegretPlot<-ggplot(data=uPlotData,
+                    aes(x=obs,
+                        y=value,
+                        color=as.factor(param),
+                        group=as.factor(param)))+
+  labs(x="Number of Observations",
+       y="Simulation Accuracy")+
   geom_line()+
   theme_grey(base_size=20)+
   scale_color_discrete(name="Parameter Setting")+
