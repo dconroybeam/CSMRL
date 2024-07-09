@@ -227,14 +227,14 @@ accPlot<-qplot(trueModel,accuracy,fill=model,
                   position="dodge")+
     theme_classic(base_size=20)+
     scale_fill_discrete(name="Tested Model")+
-    theme(legend.position="top")+coord_cartesian(ylim=c(0,100))
+    coord_cartesian(ylim=c(0,50))
 
 
 
 if(sf==1){
   
   ggsave("Figures/CSMRL Accuracy Plot.tiff",accPlot,
-         width=6,height=6,units="in",dpi=300)
+         width=8,height=6,units="in",dpi=300)
   
 }
 

@@ -53,6 +53,9 @@ nobs<-(nrow(data)/2)*30
 
 #Do you want to save figures?
 sf<-0
+
+
+c<-1.5
 ```
 
 
@@ -222,6 +225,121 @@ mateChoice<-function(data,noisePerc,model,param=.1){
 
   }
   
+  
+  
+  
+  
+  #Reciprocity-Weighted Thompson Sampling
+  if (model == "ucb") {
+    
+    ###Learning Preparation###
+    
+    #Create dataframes to store learned attraction values
+    ucbLearnMale <- matrix(1, nrow(males), nrow(females))
+    ucbLearnFemale <- matrix(1, nrow(females), nrow(males))
+    
+    
+    #Generate dataframes to store the number of visits
+    ucbInvestMale <- matrix(1, nrow(males), nrow(females))
+    ucbInvestFemale <- matrix(1, nrow(females), nrow(males))
+    
+    
+    ###Learning Trials###
+    
+    #Loop through observation opportunities
+    for (o in 1:nobs) {
+      
+      #Calculate the constant that will be added to MV values
+      #Increases the less frequently a potential mate is observed
+      cm <- c * sqrt(log(rowSums(ucbInvestMale)[1]) / ucbInvestMale)
+      cf <- c * sqrt(log(rowSums(ucbInvestFemale)[1]) / ucbInvestFemale)
+      
+      #Add constant to perceived MV
+      ucbRewardMale <- ucbLearnMale + cm
+      ucbRewardFemale <- ucbLearnFemale + cf
+      
+      #Choose the most rewarding option in light of this adjustment
+      choiceMale <- cbind(1:nrow(males),
+                          apply(ucbRewardMale, 1, function(x)
+                            resample(which(x == max(
+                              x
+                            )), 1)))
+      
+      choiceFemale <- cbind(1:nrow(females),
+                            apply(ucbRewardFemale, 1, function(x)
+                              resample(which(x == max(
+                                x
+                              )), 1)))
+      
+      
+      
+      #Update learned MV with a noisy observation of chosen partners
+      ucbLearnMale[choiceMale] <- (ucbLearnMale[choiceMale] *
+                                     ucbInvestMale[choiceMale] +
+                                     rnorm(nrow(choiceMale),
+                                           maleAttMatrix[choiceMale],
+                                           sqrt(noise))) /
+        (ucbInvestMale[choiceMale] + 1)
+      
+      ucbLearnFemale[choiceFemale] <- (ucbLearnFemale[choiceFemale] *
+                                         ucbInvestFemale[choiceFemale] +
+                                         rnorm(nrow(choiceFemale),
+                                               femaleAttMatrix[choiceFemale],
+                                               sqrt(noise))) /
+        (ucbInvestFemale[choiceFemale] + 1)
+      
+      
+      
+      #Update observation counts
+      ucbInvestMale[choiceMale] <- ucbInvestMale[choiceMale] + 1
+      ucbInvestFemale[choiceFemale] <- ucbInvestFemale[choiceFemale] + 1
+    }
+    
+    ###Mate Choice###
+    
+    #A blank dataframe for storing the paired couples
+    pairs<-matrix(,1,(ncol(males)+ncol(females)))
+    pairs<-as.data.frame(pairs)
+    
+    #Name the pairs dataframe for cbinding
+    colnames(pairs)<-c(colnames(females),colnames(males))
+    
+    #Determine which female each male has chosen
+    #Break ties randomly
+    mChoice<-data.frame("male"=1:nrow(males))
+    mChoice$choice<-apply(ucbInvestMale,1,function(x)
+      resample(which(x==max(x)),1))
+    
+    #Determine which male each female has chosen
+    #Break ties randomly
+    fChoice<-data.frame("female"=1:nrow(females))
+    fChoice$choice<-apply(ucbInvestFemale,1,function(x)
+      resample(which(x==max(x)),1))
+    
+    #Loop through females' choices
+    for(p in 1:nrow(fChoice)){
+      
+      #Determine the male chosen by the current focal female
+      chosenMale<-fChoice$choice[p]
+      
+      #Determine the female chosen by the focal female's choice
+      chosenFemale<-mChoice$choice[chosenMale]
+      
+      #If the chosen female is the focal female...
+      if(chosenFemale==p){
+        #Pair the male and female together
+        pairs<-rbind(pairs,cbind(females[p,],males[chosenMale,]))
+      }
+      
+      #Otherwise do nothing
+      
+    }
+    
+    #Remove the row of NAs from the pairs dataframe
+    pairs<-pairs[-1,]
+    
+    
+  }
   
   
   
@@ -398,6 +516,9 @@ csmNL<-lapply(noisePerc,function(x)
 csmtRecip<-lapply(noisePerc,function(x) 
   mateChoice(data,x,"tRecip"))
 
+csmUCB<-lapply(noicePerc,function(x)
+  mateChoice(data,x,"ucb"))
+
 #Create a dataframe for simulation accuracy results
 accMat<-data.frame("model"=rep(c("nl","tRecip"),each=4),
                    "noise"=rep(noisePerc,times=2),
@@ -437,7 +558,7 @@ accPlot<-qplot(model,acc*100,data=accMat,
                label=round(acc*100,2),
                fill=model,
                geom="blank",
-               xlab="RL Model",ylab="Simulation Accuracy")+
+               xlab="Models",ylab="Simulation Accuracy")+
   geom_bar(stat="identity")+
   theme_classic(base_size=18)+
   scale_fill_discrete(guide='none')+
